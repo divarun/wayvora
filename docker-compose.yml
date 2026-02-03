@@ -1,0 +1,43 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wayvora-postgres
+    environment:
+      POSTGRES_USER: wayvora
+      POSTGRES_PASSWORD: wayvora
+      POSTGRES_DB: wayvora
+    ports:
+      - "5432:5432"
+    volumes:
+      - wayvora-pgdata:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wayvora -d wayvora"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    container_name: wayvora-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - wayvora-ollama-models:/root/.ollama
+    restart: unless-stopped
+    # GPU support (uncomment if you have NVIDIA GPU + nvidia-container-toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  wayvora-pgdata:
+  wayvora-ollama-models:
