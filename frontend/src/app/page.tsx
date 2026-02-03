@@ -26,7 +26,6 @@ export default function Home() {
   const [routeError, setRouteError] = useState<string | null>(null);
   const [showAI, setShowAI] = useState(false);
   const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 48.8566, lng: 2.3522 });
-  const [mapKey, setMapKey] = useState(0); // force remount if needed
 
   const { pois, loading, error, activeCategories, toggleCategory, load } = usePOIs();
 
@@ -48,6 +47,7 @@ export default function Home() {
   }, []);
 
   const handleSearchResult = useCallback((lat: number, lng: number) => {
+    console.log('Search result:', lat, lng);
     setMapCenter({ lat, lng });
   }, []);
 
@@ -94,7 +94,7 @@ export default function Home() {
   }, [plannerPois, transportMode]);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col">
+    <div className="min-h-screen h-screen overflow-hidden bg-slate-950 flex flex-col">
       {/* Background mesh */}
       <div className="fixed inset-0 bg-gradient-mesh pointer-events-none" />
 
@@ -113,17 +113,17 @@ export default function Home() {
         />
       )}
 
-      {/* Main layout */}
-      <div className="flex flex-1 pt-16 relative">
+      {/* Main layout - pt-16 to account for fixed navbar */}
+      <div className="flex flex-1 pt-16 overflow-hidden relative">
         {/* Left Sidebar */}
-        <div className="w-80 flex-shrink-0 flex flex-col border-r border-white/[0.06] bg-slate-900/[0.6] relative z-10">
+        <div className="w-80 flex-shrink-0 flex flex-col border-r border-white/[0.06] bg-slate-900/[0.6] relative z-10 overflow-hidden">
           {/* Category Filter */}
-          <div className="p-3 border-b border-white/[0.06] bg-slate-900/[0.7]">
+          <div className="p-3 border-b border-white/[0.06] bg-slate-900/[0.7] flex-shrink-0">
             <CategoryFilter active={activeCategories} onToggle={toggleCategory} />
           </div>
 
-          {/* Conditional sidebar content */}
-          <div className="flex-1 min-h-0">
+          {/* Conditional sidebar content - scrollable */}
+          <div className="flex-1 overflow-y-auto">
             {mode === "explorer" ? (
               <ExplorerSidebar
                 pois={pois}
@@ -152,8 +152,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Map */}
-        <div className="flex-1 relative">
+        {/* Map - fills remaining space */}
+        <div className="flex-1 relative overflow-hidden">
           {/* Planner badge */}
           {plannerPois.length > 0 && mode === "explorer" && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
@@ -189,7 +189,6 @@ export default function Home() {
           )}
 
           <WayvMap
-            key={mapKey}
             pois={pois}
             selectedPoi={selectedPoi}
             plannerPois={plannerPois}
@@ -197,12 +196,13 @@ export default function Home() {
             onPoiClick={setSelectedPoi}
             onMapMoved={handleMapMoved}
             loading={loading}
+            center={mapCenter} // Pass center to map!
           />
         </div>
 
-        {/* Right sidebar — AI panel */}
+        {/* Right sidebar – AI panel */}
         {mode === "planner" && showAI && (
-          <div className="w-72 flex-shrink-0 relative z-10">
+          <div className="w-72 flex-shrink-0 relative z-10 overflow-y-auto">
             <AIRecommendPanel selectedPois={plannerPois} onAddToPlanner={addToPlanner} />
           </div>
         )}

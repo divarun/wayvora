@@ -1,6 +1,6 @@
 import { LatLng } from "@/types";
 
-const NOMINATIM_URL = process.env.NEXT_PUBLIC_NOMINATIM_URL || "https://nominatim.openstreetmap.org";
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api";
 
 export interface GeocodingResult {
   id: string;
@@ -21,10 +21,10 @@ export async function geocodeSearch(query: string, limit: number = 5): Promise<G
     extratags: "1",
   });
 
-  const response = await fetch(`${NOMINATIM_URL}/search?${params}`, {
+  // Use backend proxy instead of direct API call
+  const response = await fetch(`${BASE_URL}/proxy/nominatim/search?${params}`, {
     headers: {
-      "User-Agent": "Wayvora-Explorer/1.0",
-      Accept: "application/json",
+      "Content-Type": "application/json",
     },
   });
 
@@ -54,10 +54,10 @@ export async function reverseGeocode(coords: LatLng): Promise<string> {
     zoom: "16",
   });
 
-  const response = await fetch(`${NOMINATIM_URL}/reverse?${params}`, {
+  // Use backend proxy instead of direct API call
+  const response = await fetch(`${BASE_URL}/proxy/nominatim/reverse?${params}`, {
     headers: {
-      "User-Agent": "Wayvora-Explorer/1.0",
-      Accept: "application/json",
+      "Content-Type": "application/json",
     },
   });
 
