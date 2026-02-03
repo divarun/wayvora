@@ -1,0 +1,121 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =========================
+   Base styles
+========================= */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+}
+
+/* =========================
+   Components
+========================= */
+@layer components {
+  .glass {
+    @apply bg-white/[0.06] backdrop-blur-xl border border-white/[0.08] shadow-glass;
+  }
+
+  .glass-hover {
+    @apply transition-all duration-300;
+  }
+
+  .glass-hover:hover {
+    @apply bg-white/[0.1] border-white/[0.15];
+  }
+
+  .glass-card {
+    @apply glass glass-hover rounded-2xl;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-ocean-300 via-ocean-400 to-coral-400 bg-clip-text text-transparent;
+  }
+
+  .text-gradient-subtle {
+    @apply bg-gradient-to-r from-ocean-400 to-ocean-500 bg-clip-text text-transparent;
+  }
+
+  .btn-primary {
+    @apply px-5 py-2.5 rounded-xl bg-gradient-to-r from-ocean-500 to-ocean-600
+      text-white font-body font-semibold text-sm tracking-tight shadow-glow
+      transition-all duration-300;
+  }
+
+  .btn-primary:hover {
+    @apply shadow-lg from-ocean-400 to-ocean-500;
+  }
+
+  .btn-primary:active {
+    @apply scale-[0.97];
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 rounded-lg text-slate-300 font-body text-sm
+      transition-all duration-200;
+  }
+
+  .btn-ghost:hover {
+    @apply text-white bg-white/[0.08];
+  }
+
+  .input-glass {
+    @apply w-full bg-white/[0.06] border border-white/[0.1] rounded-xl
+      px-4 py-2.5 text-white placeholder-slate-500 font-body text-sm
+      transition-all duration-300;
+  }
+
+  .input-glass:focus {
+    @apply border-ocean-500 bg-white/[0.1] shadow-glow;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1
+      rounded-full text-xs font-semibold;
+  }
+}
+
+/* =========================
+   Utilities
+========================= */
+@layer utilities {
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+}

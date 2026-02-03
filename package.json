@@ -1,0 +1,19 @@
+{
+  "name": "wayvora",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
+    "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
+    "start": "npm run start --workspace=backend"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.24",
+    "concurrently": "^9.0.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.1"
+  }
+}
