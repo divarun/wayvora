@@ -13,8 +13,9 @@ let overpassCooldownUntil = 0;
 // simple in-memory cache (keyed by rounded coords + params)
 const cache = new Map<string, POI[]>();
 
-const MIN_REQUEST_INTERVAL = 1500; // ms
+const MIN_REQUEST_INTERVAL = 2000; // Increased from 1500ms
 const COOLDOWN_AFTER_429 = 60_000; // ms
+const COOLDOWN_AFTER_504 = 30_000; // Added cooldown for timeouts
 const CACHE_TTL = 5 * 60_000; // 5 minutes
 
 const cacheTimestamps = new Map<string, number>();
@@ -57,45 +58,48 @@ function generateMockPOIs(
 
 export async function fetchPOIs(
   center: LatLng,
-  radiusMeters: number = 500,
+  radiusMeters: number = 1500,
   categories: POICategory[] = ["restaurant", "cafe"]
 ): Promise<POI[]> {
   const now = Date.now();
 
-  // Respect cooldown after 429
+  // Respect cooldown after 429 or 504
   if (now < overpassCooldownUntil) {
+    console.log(`⏳ Cooldown active until ${new Date(overpassCooldownUntil).toLocaleTimeString()}`);
     return fallback(center, categories);
   }
 
   // Throttle request frequency
   if (now - lastRequestTime < MIN_REQUEST_INTERVAL) {
+    console.log("⏸️  Throttled: too many requests");
     return fallback(center, categories);
   }
 
   lastRequestTime = now;
 
-  // Limit categories
-  const limitedCategories = categories.slice(0, 2);
+  // Use smaller, safer radius (cap at 1500m instead of 2500m)
+  const safeRadius = Math.min(radiusMeters, 1500);
 
   // Cache key (rounded coords prevent spam while dragging)
-  const key = buildCacheKey(center, radiusMeters, limitedCategories);
+  const key = buildCacheKey(center, safeRadius, categories);
 
   const cached = cache.get(key);
   const cachedAt = cacheTimestamps.get(key);
 
   if (cached && cachedAt && now - cachedAt < CACHE_TTL) {
+    console.log("✅ Using cached POIs");
     return cached;
   }
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10_000);
+    const timeoutId = setTimeout(() => controller.abort(), 15_000); // Increased to 15s
 
     const response = await fetch(`${BASE_URL}/proxy/overpass`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        query: buildOptimizedQuery(center, radiusMeters, limitedCategories),
+        query: buildOptimizedQuery(center, safeRadius, categories),
       }),
       signal: controller.signal,
     });
@@ -108,20 +112,28 @@ export async function fetchPOIs(
       return fallback(center, categories);
     }
 
+    if (response.status === 504) {
+      console.warn("⏱️ Overpass timeout — entering short cooldown");
+      overpassCooldownUntil = Date.now() + COOLDOWN_AFTER_504;
+      return fallback(center, categories);
+    }
+
     if (!response.ok) {
+      console.error(`❌ Overpass error ${response.status}`);
       return fallback(center, categories);
     }
 
     const data = await response.json();
 
     if (!data.elements?.length) {
+      console.log("📭 No POIs found, using fallback");
       return fallback(center, categories);
     }
 
     const pois = data.elements
       .map(mapElementToPOI)
       .filter((p): p is POI => p !== null)
-      .slice(0, 20);
+      .slice(0, 30); // Increased from 20 to 30
 
     if (pois.length) {
       cache.set(key, pois);
@@ -129,8 +141,13 @@ export async function fetchPOIs(
       console.log(`✅ Loaded ${pois.length} POIs from Overpass`);
       return pois;
     }
-  } catch {
-    // ignored – fallback below
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.error("⏱️ Frontend request timeout");
+      overpassCooldownUntil = Date.now() + COOLDOWN_AFTER_504;
+    } else {
+      console.error("❌ Fetch error:", err);
+    }
   }
 
   return fallback(center, categories);
@@ -141,9 +158,9 @@ export async function fetchPOIs(
 /* ------------------------------------------------------------------ */
 
 function fallback(center: LatLng, categories: POICategory[]): POI[] {
-  const limited = categories.slice(0, 2);
   const mock: POI[] = [];
-  limited.forEach((cat) => mock.push(...generateMockPOIs(center, cat, 3)));
+  categories.forEach((cat) => mock.push(...generateMockPOIs(center, cat, 3)));
+  console.log(`🎭 Using ${mock.length} mock POIs`);
   return mock;
 }
 
@@ -158,28 +175,60 @@ function buildCacheKey(
 }
 
 /**
- * SINGLE Overpass operation
- * (critical for avoiding 429s)
+ * Build optimized Overpass query supporting ALL categories
+ * Uses union query format for better performance
  */
 function buildOptimizedQuery(
   center: LatLng,
   radius: number,
   categories: POICategory[]
 ): string {
-  const amenityValues = categories
-    .filter((c) => c === "restaurant" || c === "cafe")
-    .join("|");
+  const queries: string[] = [];
+
+  categories.forEach((category) => {
+    switch (category) {
+      case "restaurant":
+        queries.push(`node["amenity"="restaurant"](around:${radius},${center.lat},${center.lng});`);
+        break;
+      case "cafe":
+        queries.push(`node["amenity"="cafe"](around:${radius},${center.lat},${center.lng});`);
+        break;
+      case "museum":
+        queries.push(`node["tourism"="museum"](around:${radius},${center.lat},${center.lng});`);
+        queries.push(`way["tourism"="museum"](around:${radius},${center.lat},${center.lng});`);
+        break;
+      case "park":
+        queries.push(`node["leisure"="park"](around:${radius},${center.lat},${center.lng});`);
+        queries.push(`way["leisure"="park"](around:${radius},${center.lat},${center.lng});`);
+        break;
+      case "attraction":
+        queries.push(`node["tourism"="attraction"](around:${radius},${center.lat},${center.lng});`);
+        queries.push(`node["tourism"="viewpoint"](around:${radius},${center.lat},${center.lng});`);
+        break;
+    }
+  });
 
   return `
-    [out:json][timeout:10];
-    node["amenity"~"${amenityValues}"]
-      (around:${radius},${center.lat},${center.lng});
-    out body 20;
-  `;
+[out:json][timeout:25];
+(
+  ${queries.join('\n  ')}
+);
+out body 30;
+>;
+out skel qt;
+  `.trim();
 }
 
 function mapElementToPOI(el: any): POI | null {
-  if (!el.lat || !el.lon) return null;
+  if (!el.lat && !el.lon) {
+    // For ways/areas, get center point
+    if (el.center) {
+      el.lat = el.center.lat;
+      el.lon = el.center.lon;
+    } else {
+      return null;
+    }
+  }
 
   const tags = el.tags || {};
   const name = tags.name || "Unnamed Place";
@@ -189,12 +238,25 @@ function mapElementToPOI(el: any): POI | null {
   else if (tags.amenity === "cafe") category = "cafe";
   else if (tags.tourism === "museum") category = "museum";
   else if (tags.leisure === "park") category = "park";
+  else if (tags.tourism === "attraction" || tags.tourism === "viewpoint") category = "attraction";
+
+  // Build address from available tags
+  const addressParts = [];
+  if (tags["addr:housenumber"] && tags["addr:street"]) {
+    addressParts.push(`${tags["addr:housenumber"]} ${tags["addr:street"]}`);
+  } else if (tags["addr:street"]) {
+    addressParts.push(tags["addr:street"]);
+  }
+  if (tags["addr:city"]) {
+    addressParts.push(tags["addr:city"]);
+  }
+  const address = addressParts.length > 0 ? addressParts.join(", ") : "Address not available";
 
   return {
     id: `osm-${el.type}-${el.id}`,
     name,
     category,
-    address: tags["addr:street"] || "Address not available",
+    address,
     coordinates: { lat: el.lat, lng: el.lon },
     openingHours: tags.opening_hours,
     tags: tags.cuisine ? [tags.cuisine] : undefined,

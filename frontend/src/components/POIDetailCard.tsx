@@ -60,8 +60,8 @@ export default function POIDetailCard({ poi, onClose, onAddToPlanner }: POIDetai
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/[0.5] backdrop-blur-sm">
-      <div className="glass w-full max-w-md mx-0 sm:mx-4 rounded-t-3xl sm:rounded-3xl border border-white/[0.08] shadow-glass animate-slide-up sm:animate-fade-in max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/[0.6]" onClick={onClose}>
+      <div className="glass w-full max-w-md mx-0 sm:mx-4 rounded-t-3xl sm:rounded-3xl border border-white/[0.08] shadow-glass animate-slide-up sm:animate-fade-in max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {/* Color accent strip */}
         <div className="h-1.5 rounded-t-3xl sm:rounded-t-3xl" style={{ background: `linear-gradient(90deg, ${cfg.markerColor}, transparent)` }} />
 

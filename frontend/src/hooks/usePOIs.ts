@@ -17,7 +17,7 @@ export function usePOIs() {
   const abortRef = useRef<AbortController | null>(null);
   const lastCenterRef = useRef<LatLng | null>(null);
 
-  const load = useCallback(async (center: LatLng, radius: number = 2500) => {
+  const load = useCallback(async (center: LatLng, radius: number = 1500) => {
     if (abortRef.current) abortRef.current.abort();
     abortRef.current = new AbortController();
     lastCenterRef.current = center;

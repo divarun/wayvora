@@ -40,8 +40,8 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
   if (user) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.5] backdrop-blur-sm">
-        <div className="glass glass-card w-full max-w-sm mx-4 p-6 animate-fade-in">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.6]" onClick={onClose}>
+        <div className="glass glass-card w-full max-w-sm mx-4 p-6 animate-fade-in" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-display text-lg font-semibold text-white">Your Account</h2>
             <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">✕</button>
@@ -72,8 +72,8 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.5] backdrop-blur-sm">
-      <div className="glass glass-card w-full max-w-sm mx-4 p-6 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/[0.6]" onClick={onClose}>
+      <div className="glass glass-card w-full max-w-sm mx-4 p-6 animate-fade-in" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <h2 className="font-display text-lg font-semibold text-white">
