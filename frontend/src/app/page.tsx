@@ -12,6 +12,9 @@ import PlannerSidebar from "@/components/PlannerSidebar";
 import AIRecommendPanel from "@/components/AIRecommendPanel";
 import POIDetailCard from "@/components/POIDetailCard";
 import WayvMap from "@/components/WayvMap";
+import PassportPanel from "@/components/PassportPanel";
+import { gamificationService } from "@/services/gamification";
+import { generateDailyQuests } from "@/services/gamification";
 
 export default function Home() {
   const [mode, setMode] = useState<"explorer" | "planner">("explorer");
@@ -26,8 +29,35 @@ export default function Home() {
   const [routeError, setRouteError] = useState<string | null>(null);
   const [showAI, setShowAI] = useState(false);
   const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 48.8566, lng: 2.3522 });
+  const [showPassport, setShowPassport] = useState(true);
 
   const { pois, loading, error, activeCategories, toggleCategory, load } = usePOIs();
+
+  const handlePoiClick = useCallback((poi: POI) => {
+    setSelectedPoi(poi);
+
+    // NEW: Track visit and check for rewards
+    const result = gamificationService.visitPOI(poi);
+
+    if (result.isNew) {
+      console.log(`🎉 New POI visited! +${result.xpGained} XP`);
+
+      if (result.leveledUp) {
+        console.log(`📈 Level Up! You're now a ${result.newLevel}!`);
+        // TODO: Show celebration modal
+      }
+
+      if (result.achievements.length > 0) {
+        console.log(`🏆 New achievements:`, result.achievements);
+        // TODO: Show achievement toast
+      }
+
+      if (result.mysteryBox) {
+        console.log(`🎁 Mystery Box earned!`);
+        // TODO: Show mystery box animation
+      }
+    }
+  }, []);
 
   // Load POIs when center changes
   useEffect(() => {
@@ -41,6 +71,18 @@ export default function Home() {
     setTotalDuration(0);
     setRouteError(null);
   }, [plannerPois]);
+
+// In useEffect on mount:
+useEffect(() => {
+  const progress = gamificationService.getProgress();
+  if (progress && progress.activeQuests.length === 0) {
+    const cityName = "Paris"; // or get from current location
+    const dailyQuests = generateDailyQuests(cityName);
+
+    // Note: You'll need to add a method to add quests to the service
+    // For now, quests are automatically created
+  }
+}, []);
 
   const handleMapMoved = useCallback((center: LatLng) => {
     setMapCenter(center);
@@ -104,6 +146,9 @@ export default function Home() {
       {/* Auth Modal */}
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
+      {/* NEW: Passport Panel */}
+      {showPassport && <PassportPanel />}
+
       {/* POI Detail Modal */}
       {selectedPoi && (
         <POIDetailCard
@@ -129,7 +174,7 @@ export default function Home() {
                 pois={pois}
                 loading={loading}
                 error={error}
-                onPoiClick={setSelectedPoi}
+               onPoiClick={handlePoiClick}
                 onSearchResult={handleSearchResult}
                 onAddToPlanner={addToPlanner}
               />
@@ -193,7 +238,7 @@ export default function Home() {
             selectedPoi={selectedPoi}
             plannerPois={plannerPois}
             routeSegments={routeSegments}
-            onPoiClick={setSelectedPoi}
+            onPoiClick={handlePoiClick}
             onMapMoved={handleMapMoved}
             loading={loading}
             center={mapCenter} // Pass center to map!

@@ -62,6 +62,13 @@ export default function Navbar({ mode, onModeChange, onAuthClick }: NavbarProps)
             </button>
           </div>
 
+        <button
+          onClick={() => setShowPassport(!showPassport)}
+          className="glass rounded-full px-3 py-1.5 border border-white/[0.08] hover:border-white/[0.15] transition-all flex items-center gap-2">
+          <span>📖</span>
+          <span className="text-xs font-semibold text-slate-300">Passport</span>
+        </button>
+
           {/* Auth */}
           <button
             onClick={onAuthClick}
