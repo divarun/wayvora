@@ -11,10 +11,14 @@ import {
   UserProgress,
   TripMemory,
 } from "@/types/gamification";
+import { reverseGeocode } from "./nominatim";
 
 const STORAGE_KEY_PROGRESS = "wayvora_user_progress";
 const STORAGE_KEY_VISITED_POIS = "wayvora_visited_pois";
 const STORAGE_KEY_TRIP_HISTORY = "wayvora_trip_history";
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001/api";
 
 /* ============================================
    ACHIEVEMENT DEFINITIONS
@@ -160,6 +164,26 @@ export const ACHIEVEMENT_LIBRARY: Achievement[] = [
     reward: { xp: 1000 },
     tier: "platinum",
   },
+  {
+    id: "neighborhood_navigator",
+    name: "Neighborhood Navigator",
+    description: "Collect 10 neighborhood stamps",
+    category: "special",
+    iconEmoji: "🏘️",
+    requirement: { type: "stamps_collected", target: 10 },
+    reward: { xp: 300 },
+    tier: "gold",
+  },
+  {
+    id: "stamp_collector",
+    name: "Stamp Collector",
+    description: "Collect 25 neighborhood stamps",
+    category: "special",
+    iconEmoji: "📮",
+    requirement: { type: "stamps_collected", target: 25 },
+    reward: { xp: 750 },
+    tier: "platinum",
+  },
 ];
 
 /* ============================================
@@ -273,6 +297,55 @@ export function generateThemeQuests(cityName: string): Quest[] {
 }
 
 /* ============================================
+   RARITY & LOCATION DATA
+============================================ */
+
+const MAJOR_CITIES = [
+  "Paris", "London", "New York", "Tokyo", "Los Angeles", "Chicago",
+  "San Francisco", "Barcelona", "Rome", "Berlin", "Madrid", "Amsterdam",
+  "Dubai", "Singapore", "Hong Kong", "Sydney", "Melbourne", "Toronto",
+  "Vancouver", "Montreal", "Boston", "Washington", "Miami", "Las Vegas",
+  "Seattle", "Austin", "Denver", "Portland", "Philadelphia", "San Diego"
+];
+
+const TOURIST_HOTSPOTS = [
+  "Latin Quarter", "Montmartre", "Shibuya", "Shinjuku", "Times Square",
+  "Manhattan", "Brooklyn", "Westminster", "Camden", "Soho", "Chelsea",
+  "Greenwich Village", "Hollywood", "Beverly Hills", "Santa Monica",
+  "Downtown", "City Center", "Old Town", "Historic District"
+];
+
+function calculateStampRarity(
+  cityName: string,
+  neighborhoodName: string,
+  countryCode: string
+): "common" | "rare" | "legendary" {
+  const city = cityName.toLowerCase();
+  const neighborhood = neighborhoodName.toLowerCase();
+
+  // Legendary: Remote locations, small towns, or very specific cultural areas
+  if (!MAJOR_CITIES.some(c => city.includes(c.toLowerCase()))) {
+    // Small cities/towns are legendary
+    return "legendary";
+  }
+
+  // Common: Major city + tourist hotspot
+  const isMajorCity = MAJOR_CITIES.some(c => city.includes(c.toLowerCase()));
+  const isHotspot = TOURIST_HOTSPOTS.some(h => neighborhood.includes(h.toLowerCase()));
+
+  if (isMajorCity && isHotspot) {
+    return "common";
+  }
+
+  // Rare: Major city but non-tourist neighborhood, or vice versa
+  if (isMajorCity && !isHotspot) {
+    return "rare";
+  }
+
+  return "rare";
+}
+
+/* ============================================
    CORE GAMIFICATION SERVICE
 ============================================ */
 
@@ -292,10 +365,13 @@ class GamificationService {
   private loadProgress(): void {
     const stored = localStorage.getItem(STORAGE_KEY_PROGRESS);
     if (stored) {
-      this.progress = JSON.parse(stored);
+      try {
+        this.progress = JSON.parse(stored);
+      } catch {
+        this.progress = this.createNewProgress();
+      }
     } else {
       this.progress = this.createNewProgress();
-      this.saveProgress();
     }
   }
 
@@ -344,6 +420,7 @@ class GamificationService {
 
   private saveProgress(): void {
     if (this.progress) {
+      this.progress.passport.updatedAt = new Date();
       localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(this.progress));
     }
   }
@@ -373,16 +450,293 @@ class GamificationService {
     localStorage.setItem(STORAGE_KEY_TRIP_HISTORY, JSON.stringify(this.tripHistory));
   }
 
+  /* ========== STAMP SYSTEM ========== */
+
+  private async createStamp(poi: POI): Promise<Stamp | null> {
+    if (!this.progress) return null;
+
+    try {
+      // Get location details via reverse geocoding
+      const locationString = await reverseGeocode(poi.coordinates);
+
+      // Extract neighborhood and city from location string
+      const { neighborhood, city, countryCode } = this.parseLocation(locationString, poi);
+
+      if (!neighborhood || !city) {
+        console.warn("Could not determine neighborhood or city for stamp");
+        return null;
+      }
+
+      // Check if we already have a stamp for this neighborhood
+      const existingStamp = this.progress.passport.stamps.find(
+        (s) =>
+          s.neighborhoodName.toLowerCase() === neighborhood.toLowerCase() &&
+          s.cityName.toLowerCase() === city.toLowerCase()
+      );
+
+      if (existingStamp) {
+        // Update the existing stamp
+        existingStamp.uniquePOIsVisited++;
+        this.saveProgress();
+        return null; // Return null since it's not a new stamp
+      }
+
+      // Calculate rarity
+      const rarity = calculateStampRarity(city, neighborhood, countryCode);
+
+      // Generate AI description (async - will be populated later)
+      const aiDescription = await this.generateNeighborhoodFact(neighborhood, city);
+
+      // Create new stamp
+      const newStamp: Stamp = {
+        id: `stamp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        neighborhoodName: neighborhood,
+        cityName: city,
+        countryCode: countryCode,
+        coordinates: poi.coordinates,
+        earnedAt: new Date(),
+        uniquePOIsVisited: 1,
+        rarity,
+        aiDescription,
+      };
+
+      // Add stamp to collection
+      this.progress.passport.stamps.push(newStamp);
+
+      // Update statistics
+      this.progress.passport.statistics.neighborhoodsExplored++;
+      this.updateCitiesAndCountries();
+
+      return newStamp;
+    } catch (error) {
+      console.error("Error creating stamp:", error);
+      return null;
+    }
+  }
+
+  private parseLocation(
+    locationString: string,
+    poi: POI
+  ): { neighborhood: string; city: string; countryCode: string } {
+    // Location string format is typically: "Street, Neighborhood, City, Country"
+    // We'll try to parse it intelligently
+
+    const parts = locationString.split(",").map((p) => p.trim());
+
+    let neighborhood = "";
+    let city = "";
+    let countryCode = "US"; // Default
+
+    if (parts.length >= 3) {
+      // Typical case: [Street, Neighborhood, City, State/Country]
+      neighborhood = parts[1] || parts[0]; // Use street if no neighborhood
+      city = parts[2] || parts[1];
+    } else if (parts.length === 2) {
+      neighborhood = parts[0];
+      city = parts[1];
+    } else if (parts.length === 1) {
+      neighborhood = parts[0];
+      city = parts[0];
+    }
+
+    // Try to extract country code from address if available
+    if (poi.address) {
+      const addressLower = poi.address.toLowerCase();
+      if (addressLower.includes("france") || addressLower.includes("paris")) {
+        countryCode = "FR";
+      } else if (addressLower.includes("japan") || addressLower.includes("tokyo")) {
+        countryCode = "JP";
+      } else if (addressLower.includes("uk") || addressLower.includes("london")) {
+        countryCode = "GB";
+      } else if (addressLower.includes("spain")) {
+        countryCode = "ES";
+      } else if (addressLower.includes("italy")) {
+        countryCode = "IT";
+      } else if (addressLower.includes("germany")) {
+        countryCode = "DE";
+      }
+    }
+
+    return { neighborhood, city, countryCode };
+  }
+
+  private async generateNeighborhoodFact(
+    neighborhood: string,
+    city: string
+  ): Promise<string> {
+    try {
+      // Call backend API to generate neighborhood fact
+    const response = await fetch(`${BASE_URL}/api/ai/neighborhood-fact`, {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({ neighborhood, city }),
+   });
+
+
+      if (!response.ok) {
+        throw new Error("Failed to generate neighborhood fact");
+      }
+
+      const data = await response.json();
+      return data.fact || this.getFallbackFact(neighborhood, city);
+    } catch (error) {
+      console.error("Error generating neighborhood fact:", error);
+      return this.getFallbackFact(neighborhood, city);
+    }
+  }
+
+  private getFallbackFact(neighborhood: string, city: string): string {
+    const fallbackFacts = [
+      `${neighborhood} is a vibrant area in ${city} known for its unique character and local culture.`,
+      `Exploring ${neighborhood} offers a authentic glimpse into life in ${city}.`,
+      `${neighborhood} has been a cherished part of ${city}'s identity for generations.`,
+      `Visitors to ${neighborhood} discover one of ${city}'s most distinctive districts.`,
+      `The ${neighborhood} area showcases the diverse spirit of ${city}.`,
+    ];
+    return fallbackFacts[Math.floor(Math.random() * fallbackFacts.length)];
+  }
+
+  private updateCitiesAndCountries(): void {
+    if (!this.progress) return;
+
+    // Count unique cities
+    const uniqueCities = new Set(
+      this.progress.passport.stamps.map((s) => s.cityName.toLowerCase())
+    );
+    this.progress.passport.statistics.citiesVisited = uniqueCities.size;
+
+    // Count unique countries
+    const uniqueCountries = new Set(
+      this.progress.passport.stamps.map((s) => s.countryCode)
+    );
+    this.progress.passport.statistics.countriesExplored = uniqueCountries.size;
+  }
+
+  /* ========== BADGE SYSTEM ========== */
+
+  private checkCityBadges(): Badge[] {
+    if (!this.progress) return [];
+
+    const newBadges: Badge[] = [];
+
+    // Group stamps by city
+    const cityStampCounts = new Map<string, number>();
+    for (const stamp of this.progress.passport.stamps) {
+      const count = cityStampCounts.get(stamp.cityName) || 0;
+      cityStampCounts.set(stamp.cityName, count + 1);
+    }
+
+    // Award city badges for 5+ stamps
+    for (const [city, count] of cityStampCounts) {
+      if (count >= 5) {
+        const badgeId = `city_${city.toLowerCase().replace(/\s+/g, "_")}`;
+        const badgeExists = this.progress.passport.badges.some((b) => b.id === badgeId);
+
+        if (!badgeExists) {
+          const badge: Badge = {
+            id: badgeId,
+            name: `${city} Explorer`,
+            description: `Explored 5+ neighborhoods in ${city}`,
+            category: "special",
+            iconEmoji: "🏙️",
+            earnedAt: new Date(),
+            rarity: "gold",
+          };
+          this.progress.passport.badges.push(badge);
+          newBadges.push(badge);
+        }
+      }
+    }
+
+    return newBadges;
+  }
+
+  private checkCountryBadges(): Badge[] {
+    if (!this.progress) return [];
+
+    const newBadges: Badge[] = [];
+
+    // Group cities by country
+    const countryCityCounts = new Map<string, Set<string>>();
+    for (const stamp of this.progress.passport.stamps) {
+      if (!countryCityCounts.has(stamp.countryCode)) {
+        countryCityCounts.set(stamp.countryCode, new Set());
+      }
+      countryCityCounts.get(stamp.countryCode)!.add(stamp.cityName);
+    }
+
+    // Award country badges for 3+ cities
+    for (const [countryCode, cities] of countryCityCounts) {
+      if (cities.size >= 3) {
+        const badgeId = `country_${countryCode.toLowerCase()}`;
+        const badgeExists = this.progress.passport.badges.some((b) => b.id === badgeId);
+
+        if (!badgeExists) {
+          const countryName = this.getCountryName(countryCode);
+          const badge: Badge = {
+            id: badgeId,
+            name: `${countryName} Explorer`,
+            description: `Visited 3+ cities in ${countryName}`,
+            category: "special",
+            iconEmoji: "🌍",
+            earnedAt: new Date(),
+            rarity: "platinum",
+          };
+          this.progress.passport.badges.push(badge);
+          newBadges.push(badge);
+        }
+      }
+    }
+
+    return newBadges;
+  }
+
+  private getCountryName(countryCode: string): string {
+    const countryNames: Record<string, string> = {
+      US: "United States",
+      FR: "France",
+      GB: "United Kingdom",
+      JP: "Japan",
+      ES: "Spain",
+      IT: "Italy",
+      DE: "Germany",
+      CA: "Canada",
+      AU: "Australia",
+      NL: "Netherlands",
+      BE: "Belgium",
+      CH: "Switzerland",
+      AT: "Austria",
+      SE: "Sweden",
+      NO: "Norway",
+      DK: "Denmark",
+      FI: "Finland",
+      IE: "Ireland",
+      PT: "Portugal",
+      GR: "Greece",
+      CZ: "Czech Republic",
+      PL: "Poland",
+      HU: "Hungary",
+      RO: "Romania",
+      BG: "Bulgaria",
+      HR: "Croatia",
+      SI: "Slovenia",
+      SK: "Slovakia",
+    };
+    return countryNames[countryCode] || countryCode;
+  }
+
   /* ========== POI VISITS ========== */
 
-  visitPOI(poi: POI): {
+  async visitPOI(poi: POI): Promise<{
     isNew: boolean;
     xpGained: number;
     achievements: Achievement[];
     leveledUp: boolean;
     newLevel?: ExplorerTitle;
     mysteryBox?: MysteryBox;
-  } {
+    newStamp?: Stamp;
+    newBadges?: Badge[];
+  }> {
     if (!this.progress) return { isNew: false, xpGained: 0, achievements: [], leveledUp: false };
 
     const isNew = !this.visitedPOIs.has(poi.id);
@@ -395,12 +749,27 @@ class GamificationService {
       this.progress.passport.statistics.poisVisited++;
       this.updateStreak();
 
-      // Award XP
-      const xpGained = 10;
-      const leveledUp = this.addXP(xpGained);
+      // Award XP for POI visit
+      let totalXP = 10;
+      let leveledUp = this.addXP(totalXP);
+
+      // Try to create a stamp
+      const newStamp = await this.createStamp(poi);
+
+      // Award bonus XP for new stamp
+      if (newStamp) {
+        const stampXP = newStamp.rarity === "legendary" ? 50 : newStamp.rarity === "rare" ? 25 : 15;
+        totalXP += stampXP;
+        leveledUp = this.addXP(stampXP) || leveledUp;
+      }
 
       // Check for achievements
       const newAchievements = this.checkAchievements();
+
+      // Check for city and country badges
+      const cityBadges = this.checkCityBadges();
+      const countryBadges = this.checkCountryBadges();
+      const newBadges = [...cityBadges, ...countryBadges];
 
       // Update quest progress
       this.updateQuestProgress({ type: "visit_poi", poi });
@@ -412,11 +781,13 @@ class GamificationService {
 
       return {
         isNew,
-        xpGained,
+        xpGained: totalXP,
         achievements: newAchievements,
         leveledUp,
         newLevel: leveledUp ? this.progress.passport.level.title : undefined,
         mysteryBox,
+        newStamp: newStamp || undefined,
+        newBadges: newBadges.length > 0 ? newBadges : undefined,
       };
     }
 
@@ -496,6 +867,8 @@ class GamificationService {
         return stats.totalDistance >= target;
       case "streak_days":
         return stats.currentStreak >= target;
+      case "stamps_collected":
+        return this.progress.passport.stamps.length >= target;
       default:
         return false;
     }
@@ -643,6 +1016,25 @@ class GamificationService {
 
   hasVisited(poiId: string): boolean {
     return this.visitedPOIs.has(poiId);
+  }
+
+  getStamps(): Stamp[] {
+    return this.progress?.passport.stamps || [];
+  }
+
+  getStampsByCity(): Map<string, Stamp[]> {
+    const stampsByCity = new Map<string, Stamp[]>();
+    for (const stamp of this.getStamps()) {
+      if (!stampsByCity.has(stamp.cityName)) {
+        stampsByCity.set(stamp.cityName, []);
+      }
+      stampsByCity.get(stamp.cityName)!.push(stamp);
+    }
+    return stampsByCity;
+  }
+
+  getBadges(): Badge[] {
+    return this.progress?.passport.badges || [];
   }
 }
 
