@@ -4,11 +4,14 @@ import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { initDatabase } from "./db/init";
 import { authMiddleware } from "./middleware/auth";
+import { checkRedisHealth } from "./services/cache";
 import authRoutes from "./routes/auth";
 import favoritesRoutes from "./routes/favorites";
 import itinerariesRoutes from "./routes/itineraries";
 import aiRoutes from "./routes/ai";
 import proxyRoutes from "./routes/proxy";
+import passportRoutes from "./routes/passport";
+import cacheRoutes from "./routes/cache";
 
 dotenv.config();
 
@@ -99,17 +102,25 @@ app.use("/api/favorites", favoritesRoutes);
 app.use("/api/itineraries", itinerariesRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/proxy", proxyRoutes);
+app.use("/api/passport", passportRoutes);
+app.use("/api/cache", cacheRoutes);
 
 // Health check
-app.get("/api/health", (req, res) => {
+app.get("/api/health", async (req, res) => {
+  const redisHealth = await checkRedisHealth();
+
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    ollama: {
-      baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
-      model: process.env.OLLAMA_MODEL || "llama3",
-    },
+    services: {
+      database: "connected", // Assume connected if we got this far
+      redis: redisHealth ? "connected" : "disconnected",
+      ollama: {
+        baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
+        model: process.env.OLLAMA_MODEL || "llama3",
+      }
+    }
   });
 });
 
@@ -166,12 +177,22 @@ async function start() {
     console.warn("⚠️  Database init failed (continuing without DB — auth features disabled):", err);
   }
 
+  // Check Redis connection
+  const redisHealth = await checkRedisHealth();
+  if (redisHealth) {
+    console.log("✅ Redis connected and ready.");
+  } else {
+    console.warn("⚠️  Redis connection failed. Caching will be disabled.");
+  }
+
   const server = app.listen(Number(PORT), () => {
     console.log(`✅ Server listening at http://localhost:${PORT}`);
-    console.log(`   API base: http://localhost:${PORT}/api`);
-    console.log(`   Health:   http://localhost:${PORT}/api/health`);
-    console.log(`   Proxy:    http://localhost:${PORT}/api/proxy`);
-    console.log(`   Ollama:   ${process.env.OLLAMA_BASE_URL || "http://localhost:11434"} (${process.env.OLLAMA_MODEL || "llama3"})\n`);
+    console.log(`   API base:   http://localhost:${PORT}/api`);
+    console.log(`   Health:     http://localhost:${PORT}/api/health`);
+    console.log(`   Proxy:      http://localhost:${PORT}/api/proxy`);
+    console.log(`   Passport:   http://localhost:${PORT}/api/passport`);
+    console.log(`   Ollama:     ${process.env.OLLAMA_BASE_URL || "http://localhost:11434"} (${process.env.OLLAMA_MODEL || "llama3"})`);
+    console.log(`   Redis:      ${process.env.REDIS_URL || "redis://localhost:6379"}\n`);
   });
 
   // Handle shutdown signals

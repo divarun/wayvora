@@ -1,10 +1,10 @@
 import { Router, Response, Request } from "express";
-import { generateRecommendations, generateTravelTips } from "../services/ollama";
-import { generateNeighborhoodFact, generateCitySummary, generateHistoricalContext } from "../services/ollama";
+import { generateRecommendations, generateTravelTips, generateNeighborhoodFact, generateCitySummary, generateHistoricalContext } from "../services/ollama";
+import { getCache, setCache, CACHE_TTL, CacheKeys } from "../services/cache";
 
 const router = Router();
 
-// POST /ai/recommendations — no auth required
+// POST /ai/recommendations — no auth required, with caching
 router.post("/recommendations", async (req: Request, res: Response) => {
   try {
     const { selectedPois, userPreferences } = req.body;
@@ -14,8 +14,26 @@ router.post("/recommendations", async (req: Request, res: Response) => {
       return;
     }
 
+    // Generate cache key from POIs and preferences
+    const cacheKey = CacheKeys.aiRecommendations(
+      JSON.stringify(selectedPois),
+      userPreferences || ''
+    );
+
+    // Check cache
+    const cachedRecs = await getCache(cacheKey);
+    if (cachedRecs) {
+      console.log('[CACHE HIT] AI recommendations');
+      return res.json({ recommendations: cachedRecs, cached: true });
+    }
+
+    console.log('[CACHE MISS] AI recommendations - generating');
     const recommendations = await generateRecommendations(selectedPois, userPreferences);
-    res.json({ recommendations });
+
+    // Cache the recommendations
+    await setCache(cacheKey, recommendations, CACHE_TTL.AI_RECOMMENDATIONS);
+
+    res.json({ recommendations, cached: false });
   } catch (err) {
     console.error("[AI] Recommendations error:", err);
     const message = err instanceof Error ? err.message : "AI service error.";
@@ -23,7 +41,7 @@ router.post("/recommendations", async (req: Request, res: Response) => {
   }
 });
 
-// POST /ai/travel-tips — no auth required
+// POST /ai/travel-tips — no auth required, with caching
 router.post("/travel-tips", async (req: Request, res: Response) => {
   try {
     const { poi } = req.body;
@@ -33,8 +51,23 @@ router.post("/travel-tips", async (req: Request, res: Response) => {
       return;
     }
 
+    // Generate cache key
+    const cacheKey = CacheKeys.aiTips(poi.name, poi.category || 'attraction');
+
+    // Check cache
+    const cachedTips = await getCache(cacheKey);
+    if (cachedTips) {
+      console.log('[CACHE HIT] AI travel tips');
+      return res.json({ ...cachedTips, cached: true });
+    }
+
+    console.log('[CACHE MISS] AI travel tips - generating');
     const tips = await generateTravelTips(poi);
-    res.json(tips);
+
+    // Cache the tips
+    await setCache(cacheKey, tips, CACHE_TTL.AI_TIPS);
+
+    res.json({ ...tips, cached: false });
   } catch (err) {
     console.error("[AI] Travel tips error:", err);
     const message = err instanceof Error ? err.message : "AI service error.";
@@ -44,7 +77,7 @@ router.post("/travel-tips", async (req: Request, res: Response) => {
 
 /**
  * POST /ai/neighborhood-fact
- * Generate a unique fact about a neighborhood for stamp collection
+ * Generate a unique fact about a neighborhood for stamp collection (with caching)
  */
 router.post("/neighborhood-fact", async (req: Request, res: Response) => {
   try {
@@ -56,13 +89,34 @@ router.post("/neighborhood-fact", async (req: Request, res: Response) => {
       });
     }
 
+    // Generate cache key
+    const cacheKey = CacheKeys.aiNeighborhoodFact(neighborhood, city);
+
+    // Check cache first - neighborhood facts are stable
+    const cachedFact = await getCache<string>(cacheKey);
+    if (cachedFact) {
+      console.log('[CACHE HIT] AI neighborhood fact');
+      return res.json({
+        fact: cachedFact,
+        neighborhood,
+        city,
+        generatedAt: new Date().toISOString(),
+        cached: true
+      });
+    }
+
+    console.log('[CACHE MISS] AI neighborhood fact - generating');
     const fact = await generateNeighborhoodFact(neighborhood, city);
+
+    // Cache for 7 days since neighborhood facts don't change
+    await setCache(cacheKey, fact, CACHE_TTL.AI_NEIGHBORHOOD);
 
     res.json({
       fact,
       neighborhood,
       city,
-      generatedAt: new Date().toISOString()
+      generatedAt: new Date().toISOString(),
+      cached: false
     });
   } catch (error) {
     console.error("Error generating neighborhood fact:", error);
@@ -134,7 +188,5 @@ router.post("/historical-context", async (req: Request, res: Response) => {
     });
   }
 });
-
-
 
 export default router;

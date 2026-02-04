@@ -16,6 +16,12 @@ export function usePOIs() {
   ]);
   const abortRef = useRef<AbortController | null>(null);
   const lastCenterRef = useRef<LatLng | null>(null);
+  const lastCategoriesRef = useRef<POICategory[]>(activeCategories);
+
+  // Update categories ref when they change
+  useEffect(() => {
+    lastCategoriesRef.current = activeCategories;
+  }, [activeCategories]);
 
   const load = useCallback(async (center: LatLng, radius: number = 1500) => {
     if (abortRef.current) abortRef.current.abort();
@@ -25,7 +31,8 @@ export function usePOIs() {
     setLoading(true);
     setError(null);
     try {
-      const results = await fetchPOIs(center, radius, activeCategories);
+      // Use ref to get current categories without adding to dependencies
+      const results = await fetchPOIs(center, radius, lastCategoriesRef.current);
       setPois(results);
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
@@ -34,7 +41,7 @@ export function usePOIs() {
     } finally {
       setLoading(false);
     }
-  }, [activeCategories]);
+  }, []); // No dependencies - stable reference
 
   const toggleCategory = useCallback((cat: POICategory) => {
     setActiveCategories((prev) =>
@@ -49,8 +56,7 @@ export function usePOIs() {
     if (lastCenterRef.current) {
       load(lastCenterRef.current);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCategories]);
+  }, [activeCategories, load]);
 
   return {
     pois: filteredPois,

@@ -566,7 +566,7 @@ class GamificationService {
   ): Promise<string> {
     try {
       // Call backend API to generate neighborhood fact
-    const response = await fetch(`${BASE_URL}/api/ai/neighborhood-fact`, {
+    const response = await fetch(`${BASE_URL}/ai/neighborhood-fact`, {
      method: "POST",
      headers: { "Content-Type": "application/json" },
      body: JSON.stringify({ neighborhood, city }),
