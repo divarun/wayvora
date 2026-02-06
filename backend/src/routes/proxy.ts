@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getCache, setCache, CACHE_TTL } from "../services/cache";
+import { getCache, setCache, CACHE_TTL, getGridCacheKey } from "../services/cache";
 import crypto from "crypto";
 
 const router = Router();
@@ -27,18 +27,22 @@ router.post("/overpass", async (req: Request, res: Response) => {
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: "Query string is required" });
     }
-    const queryHash = crypto.createHash('md5').update(query).digest('hex');
 
-    const cacheKey = getCacheKey('overpass', queryHash);
+    // Extract coordinates, radius, and categories from query for grid-based caching
+    const cacheKey = extractGridCacheKey(query);
 
-    const cachedData = await getCache(cacheKey);
+    // If we can't extract grid info, fall back to hash-based caching
+    const fallbackHash = crypto.createHash('md5').update(query).digest('hex');
+    const finalCacheKey = cacheKey || getCacheKey('overpass', fallbackHash);
+
+    const cachedData = await getCache(finalCacheKey);
 
     if (cachedData) {
-      console.log('[CACHE HIT] Overpass query:', queryHash.substring(0, 8));
+      console.log('[CACHE HIT] Overpass query:', finalCacheKey);
       return res.json(cachedData);
     }
 
-    console.log('[CACHE MISS] Overpass query - fetching from API:', queryHash.substring(0, 8));
+    console.log('[CACHE MISS] Overpass query - fetching from API:', finalCacheKey);
     const url = `${OVERPASS_URL}/interpreter`;
 
     // Create abort controller for timeout
@@ -73,10 +77,10 @@ router.post("/overpass", async (req: Request, res: Response) => {
       const hasResults = data.elements && Array.isArray(data.elements) && data.elements.length > 0;
 
       if (hasResults) {
-        console.log(`[CACHE] Storing ${data.elements.length} POIs for query ${queryHash.substring(0, 8)}`);
-        await setCache(cacheKey, data, CACHE_TTL.OVERPASS);
+        console.log(`[CACHE] Storing ${data.elements.length} POIs for key ${finalCacheKey}`);
+        await setCache(finalCacheKey, data, CACHE_TTL.OVERPASS);
       } else {
-        console.log(`[NO CACHE] Empty result for query ${queryHash.substring(0, 8)} - not caching`);
+        console.log(`[NO CACHE] Empty result for query - not caching`);
       }
 
       return res.json(data);
@@ -100,6 +104,43 @@ router.post("/overpass", async (req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * Extract grid cache key from Overpass query
+ * Parses the query to get coordinates, radius, and categories
+ */
+function extractGridCacheKey(query: string): string | null {
+  try {
+    // Extract first coordinate pair and radius from query
+    // Example: node["amenity"="restaurant"](around:1500,48.8566,2.3514);
+    const aroundMatch = query.match(/around:(\d+),([\d.]+),([\d.]+)/);
+
+    if (!aroundMatch) {
+      return null;
+    }
+
+    const radius = parseInt(aroundMatch[1]);
+    const lat = parseFloat(aroundMatch[2]);
+    const lng = parseFloat(aroundMatch[3]);
+
+    // Extract categories from query
+    const categories: string[] = [];
+
+    if (query.includes('amenity"="restaurant"')) categories.push('restaurant');
+    if (query.includes('amenity"="cafe"')) categories.push('cafe');
+    if (query.includes('tourism"="museum"')) categories.push('museum');
+    if (query.includes('leisure"="park"')) categories.push('park');
+    if (query.includes('tourism"="attraction"') || query.includes('tourism"="viewpoint"')) {
+      categories.push('attraction');
+    }
+
+    // Use grid-based key
+    return getGridCacheKey(lat, lng, radius, categories);
+  } catch (error) {
+    console.error('[CACHE] Error extracting grid key:', error);
+    return null;
+  }
+}
 
 // GET /proxy/nominatim/search - Proxy requests to Nominatim API with smart caching
 router.get("/nominatim/search", async (req: Request, res: Response) => {

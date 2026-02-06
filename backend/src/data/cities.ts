@@ -1,5 +1,5 @@
 /**
- * City list to geocode - can be extended easily
+ * City list to geocode - extended with additional major global cities
  */
 export const CITIES = [
   // United States
@@ -23,6 +23,9 @@ export const CITIES = [
   "Las Vegas, USA",
   "San Diego, USA",
   "Portland, Oregon, USA",
+  "San Antonio, USA",
+  "San Mateo, California, USA",
+  "Oakland, California, USA",
 
   // Canada
   "Toronto, Canada",
@@ -30,6 +33,8 @@ export const CITIES = [
   "Montreal, Canada",
   "Calgary, Canada",
   "Ottawa, Canada",
+  "Edmonton, Canada",
+  "Mississauga, Canada",
 
   // UK
   "London, UK",
@@ -38,6 +43,8 @@ export const CITIES = [
   "Liverpool, UK",
   "Edinburgh, UK",
   "Glasgow, UK",
+  "Leeds, UK",
+  "Bristol, UK",
 
   // France
   "Paris, France",
@@ -52,6 +59,7 @@ export const CITIES = [
   "Hamburg, Germany",
   "Frankfurt, Germany",
   "Cologne, Germany",
+  "Stuttgart, Germany",
 
   // Spain
   "Madrid, Spain",
@@ -59,6 +67,7 @@ export const CITIES = [
   "Valencia, Spain",
   "Seville, Spain",
   "Malaga, Spain",
+  "Bilbao, Spain",
 
   // Italy
   "Rome, Italy",
@@ -66,21 +75,25 @@ export const CITIES = [
   "Florence, Italy",
   "Venice, Italy",
   "Naples, Italy",
+  "Turin, Italy",
 
   // Netherlands
   "Amsterdam, Netherlands",
   "Rotterdam, Netherlands",
   "The Hague, Netherlands",
   "Utrecht, Netherlands",
+  "Eindhoven, Netherlands",
 
   // Switzerland
   "Zurich, Switzerland",
   "Geneva, Switzerland",
   "Basel, Switzerland",
+  "Bern, Switzerland",
 
   // Austria
   "Vienna, Austria",
   "Salzburg, Austria",
+  "Graz, Austria",
 
   // Belgium
   "Brussels, Belgium",
@@ -95,9 +108,11 @@ export const CITIES = [
   "Oslo, Norway",
   "Bergen, Norway",
   "Helsinki, Finland",
+  "Reykjavik, Iceland",
 
   // Ireland & Portugal
   "Dublin, Ireland",
+  "Cork, Ireland",
   "Lisbon, Portugal",
   "Porto, Portugal",
 
@@ -110,6 +125,8 @@ export const CITIES = [
   "Budapest, Hungary",
   "Warsaw, Poland",
   "Krakow, Poland",
+  "Bucharest, Romania",
+  "Sofia, Bulgaria",
 
   // Turkey & Russia
   "Istanbul, Turkey",
@@ -126,17 +143,21 @@ export const CITIES = [
   "Nagoya, Japan",
   "Fukuoka, Japan",
   "Sapporo, Japan",
+  "Kobe, Japan",
 
   // South Korea
   "Seoul, South Korea",
   "Busan, South Korea",
   "Incheon, South Korea",
+  "Daegu, South Korea",
 
   // China
   "Beijing, China",
   "Shanghai, China",
   "Shenzhen, China",
   "Guangzhou, China",
+  "Chengdu, China",
+  "Chongqing, China",
   "Hong Kong",
 
   // Southeast Asia
@@ -144,6 +165,11 @@ export const CITIES = [
   "Bangkok, Thailand",
   "Chiang Mai, Thailand",
   "Phuket, Thailand",
+  "Kuala Lumpur, Malaysia",
+  "Jakarta, Indonesia",
+  "Manila, Philippines",
+  "Ho Chi Minh City, Vietnam",
+  "Hanoi, Vietnam",
 
   // India
   "Delhi, India",
@@ -152,10 +178,15 @@ export const CITIES = [
   "Chennai, India",
   "Hyderabad, India",
   "Kolkata, India",
+  "Pune, India",
+  "Ahmedabad, India",
 
   // Middle East
   "Dubai, UAE",
   "Abu Dhabi, UAE",
+  "Riyadh, Saudi Arabia",
+  "Doha, Qatar",
+  "Kuwait City, Kuwait",
   "Tel Aviv, Israel",
   "Jerusalem, Israel",
 
@@ -165,13 +196,16 @@ export const CITIES = [
   "Brisbane, Australia",
   "Perth, Australia",
   "Adelaide, Australia",
+  "Canberra, Australia",
   "Auckland, New Zealand",
   "Wellington, New Zealand",
+  "Christchurch, New Zealand",
 
   // South America
   "São Paulo, Brazil",
   "Rio de Janeiro, Brazil",
   "Belo Horizonte, Brazil",
+  "Brasília, Brazil",
   "Mexico City, Mexico",
   "Guadalajara, Mexico",
   "Monterrey, Mexico",
@@ -180,8 +214,16 @@ export const CITIES = [
   "Bogotá, Colombia",
   "Medellín, Colombia",
   "Lima, Peru",
+  "Quito, Ecuador",
+  "Caracas, Venezuela",
+  "La Paz, Bolivia",
 
   // Africa
   "Cape Town, South Africa",
   "Johannesburg, South Africa",
+  "Durban, South Africa",
+  "Cairo, Egypt",
+  "Lagos, Nigeria",
+  "Nairobi, Kenya",
+  "Accra, Ghana",
 ];

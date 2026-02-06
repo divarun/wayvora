@@ -61,6 +61,29 @@ function getCacheKey(prefix: string, ...parts: string[]): string {
 }
 
 /**
+ * Generate geographic grid-based cache key for POI queries
+ * This ensures that nearby requests share the same cache entry
+ * regardless of small coordinate differences
+ */
+export function getGridCacheKey(
+  lat: number,
+  lng: number,
+  radius: number,
+  categories: string[]
+): string {
+  // Round to 0.01 degree precision (~1.1km at equator)
+  // This creates a grid where nearby searches share cache
+  const gridLat = Math.round(lat * 100) / 100;
+  const gridLng = Math.round(lng * 100) / 100;
+
+  // Sort categories to ensure consistent ordering
+  const sortedCategories = [...categories].sort().join('-');
+
+  // Create semantic cache key
+  return `wayvora:overpass:grid:${gridLat}:${gridLng}:${radius}:${sortedCategories}`;
+}
+
+/**
  * Get cached data
  */
 export async function getCache<T>(key: string): Promise<T | null> {

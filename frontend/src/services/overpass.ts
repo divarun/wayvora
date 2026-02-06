@@ -42,7 +42,7 @@ function generateMockPOIs(
 export async function fetchPOIs(
   center: LatLng,
   radiusMeters: number = 1500,
-  categories: POICategory[] = ["restaurant", "cafe"]
+  categories: POICategory[] = ["restaurant", "cafe", "museum", "park", "attraction"]
 ): Promise<POI[]> {
   // Use smaller, safer radius (cap at 1500m)
   const safeRadius = Math.min(radiusMeters, 1500);

@@ -31,24 +31,51 @@ router.get("/health", async (req: Request, res: Response) => {
  * - { mode: 'top' } - Warm top 25 cities with geocoding (default, recommended)
  * - { mode: 'geocoding' } - Only warm Nominatim geocoding cache
  * - { mode: 'poi' } - Only warm POI cache (requires geocoding cache to exist)
- * - { mode: 'legacy' } - Use old hardcoded coordinates method
  * - { cities: ['Paris, France', 'London, UK'] } - Warm specific cities
+ * - { skipExisting: true } - Skip cities that are already cached (for resume)
+ * - { retryFailed: true } - Retry only cities that failed in previous run
  */
 router.post("/warm", requireAuth, async (req: Request, res: Response) => {
   try {
-    const { mode, cities } = req.body;
+    const { mode, cities, skipExisting, retryFailed } = req.body;
     const warmingMode = mode ?? 'top';
     const targetCities = Array.isArray(cities) ? cities : undefined;
+    const skip = skipExisting ?? false;
+    const retry = retryFailed ?? false;
 
     res.json({
       status: "started",
       message: "Cache warming started in background. Check server logs for progress.",
       mode: warmingMode,
-      cities: targetCities ?? 'top 25 cities',
-      note: warmingMode === 'top' ? 'Using Nominatim for coordinates (recommended)' : undefined
+      cities: targetCities ?? (retry ? 'failed cities only' : 'top 25 cities'),
+      skipExisting: skip,
+      retryFailed: retry,
+      note: skip ? 'Will skip already cached cities' :
+            retry ? 'Will retry only previously failed cities' :
+            'Full warmup - may take 10-20 minutes'
     });
 
     const run = async () => {
+      // Handle retry failed cities
+      if (retry) {
+        const fs = require('fs');
+        const path = require('path');
+        const failedFile = path.join(__dirname, '../data/failed_cities.json');
+
+        if (!fs.existsSync(failedFile)) {
+          console.log('❌ No failed cities file found. Nothing to retry.');
+          return;
+        }
+
+        const data = JSON.parse(fs.readFileSync(failedFile, 'utf-8'));
+        const citiesToRetry = data.failures.map((f: any) => f.name);
+
+        console.log(`🔄 Retrying ${citiesToRetry.length} failed cities...`);
+        await warmMajorCities(citiesToRetry, { skipExisting: false, saveFailures: true });
+        return;
+      }
+
+      // Handle normal warming modes
       switch (warmingMode) {
         case 'geocoding':
           await warmGeocodingCache(targetCities);
@@ -58,9 +85,9 @@ router.post("/warm", requireAuth, async (req: Request, res: Response) => {
         case 'top':
         default:
           if (targetCities) {
-            await warmMajorCities(targetCities);
+            await warmMajorCities(targetCities, { skipExisting: skip });
           } else {
-            await warmTopCities();
+            await warmMajorCities(undefined, { skipExisting: skip });
           }
       }
     };
@@ -71,6 +98,36 @@ router.post("/warm", requireAuth, async (req: Request, res: Response) => {
       status: "error",
       message: error instanceof Error ? error.message : "Unknown error"
     });
+  }
+});
+
+/**
+ * GET /cache/failed - Get list of failed cities from last warmup
+ */
+router.get("/failed", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const failedFile = path.join(__dirname, '../data/failed_cities.json');
+
+    if (!fs.existsSync(failedFile)) {
+      return res.json({
+        failures: [],
+        message: "No failed cities - all successful or no warmup run yet"
+      });
+    }
+
+    const data = JSON.parse(fs.readFileSync(failedFile, 'utf-8'));
+
+    return res.json({
+      timestamp: data.timestamp,
+      count: data.failures.length,
+      failures: data.failures,
+      message: `${data.failures.length} cities failed in last warmup`
+    });
+  } catch (error) {
+    console.error('[CACHE] Error reading failed cities:', error);
+    return res.status(500).json({ error: 'Failed to read failed cities file' });
   }
 });
 
@@ -123,6 +180,9 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
     const passportKeys = await redis.keys('wayvora:passport:*');
     const stampKeys = await redis.keys('wayvora:stamps:*');
 
+    // Get sample of overpass keys to show grid-based format
+    const sampleOverpassKeys = overpassKeys.slice(0, 5);
+
     res.json({
       total: overpassKeys.length + nominatimKeys.length + aiKeys.length + passportKeys.length + stampKeys.length,
       breakdown: {
@@ -132,7 +192,10 @@ router.get("/stats", requireAuth, async (req: Request, res: Response) => {
         passport: passportKeys.length,
         stamps: stampKeys.length
       },
-      note: "Nominatim cache includes both geocoding and reverse geocoding results"
+      sampleKeys: {
+        overpass: sampleOverpassKeys
+      },
+      note: "Overpass keys use grid-based caching for better hit rates"
     });
   } catch (err) {
     console.error('[CACHE] Error getting cache stats:', err);

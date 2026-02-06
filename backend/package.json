@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "db:init": "ts-node --transpile-only src/db/init.ts",
     "warm-cache": "tsx src/scripts/warmCache.ts",
+    "warm-cache:clear-cache": "npm run warm-cache -- --clear-cache",
     "warm-geocoding": "tsx src/scripts/warmGeocoding.ts"
   },
   "dependencies": {
