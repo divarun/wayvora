@@ -18,31 +18,23 @@ export default function RootLayout({
     setMounted(true);
   }, []);
 
-  // During SSR and before hydration, render a minimal shell
-  if (!mounted) {
-    return (
-      <html lang="en" className="dark">
-        <head>
-          <title>Wayvora - Smart Local Explorer</title>
-          <meta name="description" content="Discover, explore, and plan your local adventures with AI-powered insights." />
-        </head>
-        <body className="min-h-screen bg-slate-950 text-white font-body">
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="animate-pulse text-slate-400">Loading...</div>
-          </div>
-        </body>
-      </html>
-    );
-  }
-
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <title>Wayvora - Smart Local Explorer</title>
         <meta name="description" content="Discover, explore, and plan your local adventures with AI-powered insights." />
       </head>
-      <body className={`min-h-screen bg-slate-950 text-white font-body ${inter.variable}`}>
-        <AuthProvider>{children}</AuthProvider>
+      <body
+        className={`min-h-screen bg-slate-950 text-white font-body ${inter.variable}`}
+        suppressHydrationWarning
+      >
+        {!mounted ? (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-pulse text-slate-400">Loading...</div>
+          </div>
+        ) : (
+          <AuthProvider>{children}</AuthProvider>
+        )}
       </body>
     </html>
   );

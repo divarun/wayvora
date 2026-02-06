@@ -6,7 +6,9 @@
     "dev": "ts-node --transpile-only src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "db:init": "ts-node --transpile-only src/db/init.ts"
+    "db:init": "ts-node --transpile-only src/db/init.ts",
+    "warm-cache": "tsx src/scripts/warmCache.ts",
+    "warm-geocoding": "tsx src/scripts/warmGeocoding.ts"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
@@ -17,6 +19,7 @@
     "express-rate-limit": "^8.2.1",
     "ioredis": "^5.3.2",
     "jsonwebtoken": "^9.0.2",
+    "node-cron": "^4.2.1",
     "pg": "^8.11.5",
     "uuid": "^9.0.0",
     "zod": "^4.3.6"
@@ -29,6 +32,7 @@
     "@types/pg": "^8.11.5",
     "@types/uuid": "^9.0.7",
     "ts-node": "^10.5.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3"
   }
 }

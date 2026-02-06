@@ -25,29 +25,43 @@ cp .env backend/.env
 npm run dev
 # → Frontend: http://localhost:3000
 # → Backend:  http://localhost:3001
+
+#Optional : Cache 
+
+# Warm everything (geocoding + POI data)
+cd backend
+npm run warm-cache
+
+# Or just geocoding
+npm run warm-geocoding
 ```
 
 ## Architecture
 
 ```
 wayvora/
-├── frontend/          # Next.js 14 + TypeScript + TailwindCSS
+├── frontend/          
 │   └── src/
-│       ├── app/       # Next.js app router (page.tsx, layout.tsx)
-│       ├── components/# React components (map, sidebars, modals)
-│       ├── hooks/     # Custom hooks (auth, favorites, POIs)
-│       ├── services/  # API clients (Overpass, Nominatim, OSRM, backend)
-│       ├── types/     # Shared TypeScript interfaces
-│       └── utils/     # Constants, export helpers
-├── backend/           # Express + TypeScript
+│       ├── app/       
+│       ├── components/
+│       ├── data/
+│       ├── hooks/     
+│       ├── services/ 
+│       ├── styles/ 
+│       ├── types/     
+│       └── utils/     
+├── backend/           
 │   └── src/
-│       ├── routes/    # auth, favorites, itineraries, ai
-│       ├── middleware/# JWT auth middleware
-│       ├── services/  # Ollama HTTP client
-│       └── db/        # pg Pool + schema init
-├── database/          # schema.sql + seed.sql
-├── docker-compose.yml # PostgreSQL + Ollama
-└── .env.example       # All env vars
+│       ├── data/ 
+│       ├── db/ 
+│       ├── middleware/   
+│       ├── routes/
+│       ├── services/  
+│       ├── scripts/ 
+│       └── services/        
+├── database/          
+├── docker-compose.yml 
+└── .env.example       
 ```
 
 ## Environment Variables
@@ -62,35 +76,6 @@ wayvora/
 | `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:3001/api` | Frontend → Backend |
 | `NEXT_PUBLIC_OSRM_URL` | `http://router.project-osrm.org` | Routing engine |
 
-## Features
 
-### Guest Mode (no login required)
-- Full Explorer + Planner access
-- Favorites saved to localStorage
-- AI recommendations via Ollama proxy
-- Route export as JSON and PDF
-
-### Account Mode (optional)
-- Register / login with email + password
-- Favorites and itineraries synced to PostgreSQL
-- Guest data migrated on first login
-
-### Maps & Routing
-- OpenStreetMap tiles via Leaflet.js
-- POI discovery via Overpass API
-- Geocoding via Nominatim
-- Route computation via OSRM (public instance or self-hosted)
-
-### AI (local only)
-- Powered by Ollama running locally
-- No cloud API keys required
-- Generates POI descriptions, travel tips, and route-aware recommendations
-
-## Open Source Stack
-- **Frontend**: Next.js, React, TypeScript, TailwindCSS, Leaflet.js
-- **Backend**: Node.js, Express, TypeScript, pg
-- **Database**: PostgreSQL
-- **Maps**: OpenStreetMap, Overpass API, Nominatim, OSRM
-- **AI**: Ollama (llama3 or any compatible model)
 
 All dependencies are open source. No Google Maps, Mapbox, OpenAI, or proprietary services.

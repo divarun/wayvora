@@ -12,6 +12,7 @@ import aiRoutes from "./routes/ai";
 import proxyRoutes from "./routes/proxy";
 import passportRoutes from "./routes/passport";
 import cacheRoutes from "./routes/cache";
+import { startCacheWarmer } from "./scheduler";
 
 dotenv.config();
 
@@ -181,6 +182,9 @@ async function start() {
   const redisHealth = await checkRedisHealth();
   if (redisHealth) {
     console.log("✅ Redis connected and ready.");
+
+    // Start automatic cache warming scheduler
+    startCacheWarmer();
   } else {
     console.warn("⚠️  Redis connection failed. Caching will be disabled.");
   }
