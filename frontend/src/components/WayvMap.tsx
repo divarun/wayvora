@@ -44,8 +44,11 @@ export default function WayvMap({
     if (!containerRef.current || !L) return;
     if (mapRef.current) return;
 
+    // Use provided center or default to New York
+    const initialCenter = center || { lat: 40.7128, lng: -74.0060 };
+
     const map = L.map(containerRef.current, {
-      center: [48.8566, 2.3522],
+      center: [initialCenter.lat, initialCenter.lng],
       zoom: 13,
       zoomControl: false,
     });

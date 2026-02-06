@@ -51,7 +51,7 @@ export default function PassportPanel() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-white/[0.06] bg-slate-900/[0.5] overflow-x-auto">
+      <div className="flex border-b border-white/[0.06] bg-slate-900/[0.5] overflow-x-auto flex-shrink-0 sticky top-0 z-10">
         {[
           { id: "overview", label: "Stats", emoji: "📊" },
           { id: "stamps", label: "Stamps", emoji: "🎫" },
@@ -62,7 +62,7 @@ export default function PassportPanel() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-shrink-0 px-3 py-2 text-xs font-semibold transition-all ${
+            className={`flex-shrink-0 px-3 py-2 text-xs font-semibold transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? "text-ocean-300 bg-ocean-500/[0.15] border-b-2 border-ocean-400"
                 : "text-slate-400 hover:text-slate-300"
@@ -83,6 +83,7 @@ export default function PassportPanel() {
               label="Stamps Collected"
               value={stamps.length}
               color="ocean"
+              onClick={() => setActiveTab("stamps")}
             />
             <StatCard
               emoji="📍"
@@ -224,11 +225,13 @@ function StatCard({
   label,
   value,
   color,
+  onClick,
 }: {
   emoji: string;
   label: string;
   value: string | number;
   color: "ocean" | "coral" | "emerald" | "amber";
+  onClick?: () => void;
 }) {
   const colorMap = {
     ocean: "from-ocean-500/[0.15] to-ocean-600/[0.15] border-ocean-500/[0.2]",
@@ -237,24 +240,29 @@ function StatCard({
     amber: "from-amber-500/[0.15] to-amber-600/[0.15] border-amber-500/[0.2]",
   };
 
+  const Component = onClick ? 'button' : 'div';
+
   return (
-    <div
-      className={`bg-gradient-to-r ${colorMap[color]} border rounded-xl px-3 py-2.5 flex items-center gap-3`}
+    <Component
+      onClick={onClick}
+      className={`bg-gradient-to-r ${colorMap[color]} border rounded-xl px-3 py-2.5 flex items-center gap-3 ${
+        onClick ? 'cursor-pointer hover:brightness-110 transition-all' : ''
+      } w-full text-left`}
     >
       <span className="text-2xl">{emoji}</span>
       <div className="flex-1">
         <p className="text-slate-400 text-xs">{label}</p>
         <p className="text-white font-semibold text-lg">{value}</p>
       </div>
-    </div>
+    </Component>
   );
 }
 
 function StampCard({ stamp }: { stamp: Stamp }) {
   const rarityColors = {
-    common: "from-slate-500/[0.15] to-slate-600/[0.15] border-slate-500/[0.2]",
-    rare: "from-ocean-500/[0.15] to-ocean-600/[0.15] border-ocean-500/[0.2]",
-    legendary: "from-amber-400/[0.15] to-amber-500/[0.15] border-amber-400/[0.2]",
+    common: "from-slate-500/[0.3] to-slate-600/[0.3] border-slate-500/[0.3]",
+    rare: "from-ocean-500/[0.3] to-ocean-600/[0.3] border-ocean-500/[0.3]",
+    legendary: "from-amber-600/[0.35] to-amber-700/[0.35] border-amber-600/[0.4]",
   };
 
   const rarityLabels = {
@@ -277,7 +285,7 @@ function StampCard({ stamp }: { stamp: Stamp }) {
             <span className="text-lg">{getRarityEmoji(stamp.rarity)}</span>
             <div>
               <p className="text-white font-semibold text-sm">{stamp.neighborhoodName}</p>
-              <p className="text-slate-400 text-xs">{stamp.cityName}, {stamp.countryCode}</p>
+              <p className="text-slate-200 text-xs">{stamp.cityName}, {stamp.countryCode}</p>
             </div>
           </div>
         </div>
@@ -287,16 +295,16 @@ function StampCard({ stamp }: { stamp: Stamp }) {
       </div>
 
       {stamp.aiDescription && (
-        <div className="bg-white/[0.06] rounded-lg p-2 mb-2">
-          <p className="text-slate-300 text-xs leading-relaxed">{stamp.aiDescription}</p>
+        <div className="bg-slate-900/[0.3] rounded-lg p-2 mb-2 border border-white/[0.15]">
+          <p className="text-slate-100 text-xs leading-relaxed">{stamp.aiDescription}</p>
         </div>
       )}
 
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-slate-500">
+      <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-white/[0.15]">
+        <span className="text-slate-100 font-medium">
           {stamp.uniquePOIsVisited} {stamp.uniquePOIsVisited === 1 ? 'place' : 'places'} visited
         </span>
-        <span className="text-slate-500">{formattedDate}</span>
+        <span className="text-slate-100 font-medium">{formattedDate}</span>
       </div>
     </div>
   );
@@ -448,9 +456,9 @@ function getRarityEmoji(rarity: "common" | "rare" | "legendary"): string {
 
 function getRarityTextColor(rarity: "common" | "rare" | "legendary"): string {
   const colors = {
-    common: "text-slate-400",
-    rare: "text-ocean-400",
-    legendary: "text-amber-400",
+    common: "text-slate-200",
+    rare: "text-ocean-200",
+    legendary: "text-amber-200",
   };
   return colors[rarity];
 }

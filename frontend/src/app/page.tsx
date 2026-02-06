@@ -28,10 +28,32 @@ export default function Home() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [showAI, setShowAI] = useState(false);
-  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 48.8566, lng: 2.3522 });
+  const [mapCenter, setMapCenter] = useState<LatLng>({ lat: 40.7128, lng: -74.0060 }); // Default to New York
   const [showPassport, setShowPassport] = useState(true);
 
   const { pois, loading, error, activeCategories, toggleCategory, load } = usePOIs();
+
+  // Get user's location on mount
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setMapCenter({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.log('Geolocation error:', error.message, '- Using default location (New York)');
+          // Keep default New York location if geolocation fails
+        },
+        {
+          timeout: 5000,
+          maximumAge: 300000, // 5 minutes
+        }
+      );
+    }
+  }, []);
 
   const handlePoiClick = useCallback((poi: POI) => {
     setSelectedPoi(poi);
@@ -141,7 +163,13 @@ useEffect(() => {
       <div className="fixed inset-0 bg-gradient-mesh pointer-events-none" />
 
       {/* Navbar */}
-      <Navbar mode={mode} onModeChange={setMode} onAuthClick={() => setAuthOpen(true)} />
+      <Navbar
+        mode={mode}
+        onModeChange={setMode}
+        onAuthClick={() => setAuthOpen(true)}
+        showPassport={showPassport}
+        onTogglePassport={() => setShowPassport(!showPassport)}
+      />
 
       {/* Auth Modal */}
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />

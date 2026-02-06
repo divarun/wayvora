@@ -1,0 +1,133 @@
+{
+  "defaultCountryCode": "US",
+  "countries": {
+    "AF": { "name": "Afghanistan", "aliases": ["afghanistan"] },
+    "AL": { "name": "Albania", "aliases": ["albania"] },
+    "DZ": { "name": "Algeria", "aliases": ["algeria"] },
+    "AD": { "name": "Andorra", "aliases": ["andorra"] },
+    "AO": { "name": "Angola", "aliases": ["angola"] },
+    "AG": { "name": "Antigua and Barbuda", "aliases": ["antigua", "barbuda"] },
+    "AR": { "name": "Argentina", "aliases": ["argentina"] },
+    "AM": { "name": "Armenia", "aliases": ["armenia"] },
+    "AU": { "name": "Australia", "aliases": ["australia"] },
+    "AT": { "name": "Austria", "aliases": ["austria"] },
+    "AZ": { "name": "Azerbaijan", "aliases": ["azerbaijan"] },
+
+    "BS": { "name": "Bahamas", "aliases": ["bahamas"] },
+    "BH": { "name": "Bahrain", "aliases": ["bahrain"] },
+    "BD": { "name": "Bangladesh", "aliases": ["bangladesh"] },
+    "BB": { "name": "Barbados", "aliases": ["barbados"] },
+    "BY": { "name": "Belarus", "aliases": ["belarus"] },
+    "BE": { "name": "Belgium", "aliases": ["belgium"] },
+    "BZ": { "name": "Belize", "aliases": ["belize"] },
+    "BJ": { "name": "Benin", "aliases": ["benin"] },
+    "BT": { "name": "Bhutan", "aliases": ["bhutan"] },
+    "BO": { "name": "Bolivia", "aliases": ["bolivia"] },
+    "BA": { "name": "Bosnia and Herzegovina", "aliases": ["bosnia", "herzegovina"] },
+    "BW": { "name": "Botswana", "aliases": ["botswana"] },
+    "BR": { "name": "Brazil", "aliases": ["brazil", "brasil"] },
+    "BN": { "name": "Brunei", "aliases": ["brunei"] },
+    "BG": { "name": "Bulgaria", "aliases": ["bulgaria"] },
+    "BF": { "name": "Burkina Faso", "aliases": ["burkina faso"] },
+    "BI": { "name": "Burundi", "aliases": ["burundi"] },
+
+    "KH": { "name": "Cambodia", "aliases": ["cambodia"] },
+    "CM": { "name": "Cameroon", "aliases": ["cameroon"] },
+    "CA": { "name": "Canada", "aliases": ["canada"] },
+    "CV": { "name": "Cape Verde", "aliases": ["cape verde", "cabo verde"] },
+    "CF": { "name": "Central African Republic", "aliases": ["central african republic"] },
+    "TD": { "name": "Chad", "aliases": ["chad"] },
+    "CL": { "name": "Chile", "aliases": ["chile"] },
+    "CN": { "name": "China", "aliases": ["china"] },
+    "CO": { "name": "Colombia", "aliases": ["colombia"] },
+    "KM": { "name": "Comoros", "aliases": ["comoros"] },
+    "CG": { "name": "Congo", "aliases": ["congo"] },
+    "CR": { "name": "Costa Rica", "aliases": ["costa rica"] },
+    "HR": { "name": "Croatia", "aliases": ["croatia"] },
+    "CU": { "name": "Cuba", "aliases": ["cuba"] },
+    "CY": { "name": "Cyprus", "aliases": ["cyprus"] },
+    "CZ": { "name": "Czech Republic", "aliases": ["czech republic", "czechia"] },
+
+    "DK": { "name": "Denmark", "aliases": ["denmark"] },
+    "DJ": { "name": "Djibouti", "aliases": ["djibouti"] },
+    "DO": { "name": "Dominican Republic", "aliases": ["dominican republic"] },
+
+    "EC": { "name": "Ecuador", "aliases": ["ecuador"] },
+    "EG": { "name": "Egypt", "aliases": ["egypt"] },
+    "SV": { "name": "El Salvador", "aliases": ["el salvador"] },
+    "EE": { "name": "Estonia", "aliases": ["estonia"] },
+    "ET": { "name": "Ethiopia", "aliases": ["ethiopia"] },
+
+    "FI": { "name": "Finland", "aliases": ["finland"] },
+    "FR": { "name": "France", "aliases": ["france"] },
+
+    "GE": { "name": "Georgia", "aliases": ["georgia"] },
+    "DE": { "name": "Germany", "aliases": ["germany", "deutschland"] },
+    "GH": { "name": "Ghana", "aliases": ["ghana"] },
+    "GR": { "name": "Greece", "aliases": ["greece"] },
+    "GT": { "name": "Guatemala", "aliases": ["guatemala"] },
+
+    "HN": { "name": "Honduras", "aliases": ["honduras"] },
+    "HU": { "name": "Hungary", "aliases": ["hungary"] },
+
+    "IS": { "name": "Iceland", "aliases": ["iceland"] },
+    "IN": { "name": "India", "aliases": ["india"] },
+    "ID": { "name": "Indonesia", "aliases": ["indonesia"] },
+    "IR": { "name": "Iran", "aliases": ["iran"] },
+    "IQ": { "name": "Iraq", "aliases": ["iraq"] },
+    "IE": { "name": "Ireland", "aliases": ["ireland"] },
+    "IL": { "name": "Israel", "aliases": ["israel"] },
+    "IT": { "name": "Italy", "aliases": ["italy"] },
+
+    "JP": { "name": "Japan", "aliases": ["japan"] },
+    "JO": { "name": "Jordan", "aliases": ["jordan"] },
+
+    "KE": { "name": "Kenya", "aliases": ["kenya"] },
+    "KR": { "name": "South Korea", "aliases": ["south korea", "korea"] },
+
+    "LV": { "name": "Latvia", "aliases": ["latvia"] },
+    "LB": { "name": "Lebanon", "aliases": ["lebanon"] },
+    "LT": { "name": "Lithuania", "aliases": ["lithuania"] },
+    "LU": { "name": "Luxembourg", "aliases": ["luxembourg"] },
+
+    "MY": { "name": "Malaysia", "aliases": ["malaysia"] },
+    "MX": { "name": "Mexico", "aliases": ["mexico"] },
+    "MA": { "name": "Morocco", "aliases": ["morocco"] },
+
+    "NL": { "name": "Netherlands", "aliases": ["netherlands", "holland"] },
+    "NZ": { "name": "New Zealand", "aliases": ["new zealand"] },
+    "NG": { "name": "Nigeria", "aliases": ["nigeria"] },
+    "NO": { "name": "Norway", "aliases": ["norway"] },
+
+    "PK": { "name": "Pakistan", "aliases": ["pakistan"] },
+    "PH": { "name": "Philippines", "aliases": ["philippines"] },
+    "PL": { "name": "Poland", "aliases": ["poland"] },
+    "PT": { "name": "Portugal", "aliases": ["portugal"] },
+
+    "RO": { "name": "Romania", "aliases": ["romania"] },
+    "RU": { "name": "Russia", "aliases": ["russia"] },
+
+    "SA": { "name": "Saudi Arabia", "aliases": ["saudi arabia"] },
+    "RS": { "name": "Serbia", "aliases": ["serbia"] },
+    "SG": { "name": "Singapore", "aliases": ["singapore"] },
+    "SK": { "name": "Slovakia", "aliases": ["slovakia"] },
+    "SI": { "name": "Slovenia", "aliases": ["slovenia"] },
+    "ZA": { "name": "South Africa", "aliases": ["south africa"] },
+    "ES": { "name": "Spain", "aliases": ["spain"] },
+    "SE": { "name": "Sweden", "aliases": ["sweden"] },
+    "CH": { "name": "Switzerland", "aliases": ["switzerland"] },
+
+    "TH": { "name": "Thailand", "aliases": ["thailand"] },
+    "TR": { "name": "Turkey", "aliases": ["turkey"] },
+
+    "UA": { "name": "Ukraine", "aliases": ["ukraine"] },
+    "AE": { "name": "United Arab Emirates", "aliases": ["uae", "united arab emirates"] },
+    "GB": { "name": "United Kingdom", "aliases": ["united kingdom", "uk", "britain"] },
+    "US": { "name": "United States", "aliases": ["united states", "usa", "america"] },
+
+    "VN": { "name": "Vietnam", "aliases": ["vietnam"] },
+
+    "ZM": { "name": "Zambia", "aliases": ["zambia"] },
+    "ZW": { "name": "Zimbabwe", "aliases": ["zimbabwe"] }
+  }
+}

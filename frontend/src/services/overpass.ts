@@ -213,7 +213,7 @@ function buildOptimizedQuery(
 (
   ${queries.join('\n  ')}
 );
-out body 30;
+out body center 30;
 >;
 out skel qt;
   `.trim();
@@ -231,7 +231,19 @@ function mapElementToPOI(el: any): POI | null {
   }
 
   const tags = el.tags || {};
-  const name = tags.name || "Unnamed Place";
+
+  // Try multiple name fields in order of preference
+  const name = tags.name ||
+               tags["name:en"] ||
+               tags.operator ||
+               tags.brand ||
+               tags["alt_name"] ||
+               tags.description ||
+               tags.ref ||
+               (tags.tourism && `${tags.tourism.charAt(0).toUpperCase() + tags.tourism.slice(1)}`) ||
+               (tags.amenity && `${tags.amenity.charAt(0).toUpperCase() + tags.amenity.slice(1)}`) ||
+               (tags.leisure && `${tags.leisure.charAt(0).toUpperCase() + tags.leisure.slice(1)}`) ||
+               "Unnamed Place";
 
   let category: POICategory = "attraction";
   if (tags.amenity === "restaurant") category = "restaurant";
@@ -249,7 +261,12 @@ function mapElementToPOI(el: any): POI | null {
   }
   if (tags["addr:city"]) {
     addressParts.push(tags["addr:city"]);
+  } else if (tags["addr:suburb"]) {
+    addressParts.push(tags["addr:suburb"]);
+  } else if (tags["addr:district"]) {
+    addressParts.push(tags["addr:district"]);
   }
+
   const address = addressParts.length > 0 ? addressParts.join(", ") : "Address not available";
 
   return {

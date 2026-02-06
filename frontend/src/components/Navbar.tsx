@@ -5,9 +5,11 @@ interface NavbarProps {
   mode: "explorer" | "planner";
   onModeChange: (mode: "explorer" | "planner") => void;
   onAuthClick: () => void;
+  showPassport: boolean;
+  onTogglePassport: () => void;
 }
 
-export default function Navbar({ mode, onModeChange, onAuthClick }: NavbarProps) {
+export default function Navbar({ mode, onModeChange, onAuthClick, showPassport, onTogglePassport }: NavbarProps) {
   const { user } = useAuth();
 
   return (
@@ -63,10 +65,16 @@ export default function Navbar({ mode, onModeChange, onAuthClick }: NavbarProps)
           </div>
 
         <button
-          onClick={() => setShowPassport(!showPassport)}
-          className="glass rounded-full px-3 py-1.5 border border-white/[0.08] hover:border-white/[0.15] transition-all flex items-center gap-2">
+          onClick={onTogglePassport}
+          className={`glass rounded-full px-3 py-1.5 border transition-all flex items-center gap-2 ${
+            showPassport
+              ? "border-ocean-500/[0.3] bg-ocean-500/[0.15]"
+              : "border-white/[0.08] hover:border-white/[0.15]"
+          }`}>
           <span>📖</span>
-          <span className="text-xs font-semibold text-slate-300">Passport</span>
+          <span className={`text-xs font-semibold ${showPassport ? "text-ocean-300" : "text-slate-300"}`}>
+            Passport
+          </span>
         </button>
 
           {/* Auth */}
