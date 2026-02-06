@@ -14,6 +14,8 @@ const API_TIMEOUT = 60000;
  * Generate cache key with prefix
  */
 function getCacheKey(prefix: string, ...parts: string[]): string {
+    console.log('Cache Key:');
+    console.log(`wayvora:${prefix}:${parts.join(':')}`);
   return `wayvora:${prefix}:${parts.join(':')}`;
 }
 
@@ -25,9 +27,8 @@ router.post("/overpass", async (req: Request, res: Response) => {
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: "Query string is required" });
     }
-
-    // Create a better cache key using full query hash
     const queryHash = crypto.createHash('md5').update(query).digest('hex');
+
     const cacheKey = getCacheKey('overpass', queryHash);
 
     const cachedData = await getCache(cacheKey);

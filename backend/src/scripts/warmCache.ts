@@ -104,7 +104,9 @@ async function warmCityCache(cityName: string): Promise<boolean> {
     }
 
     const query = buildQuery(coords.lat, coords.lng, RADIUS, CATEGORIES);
+
     const queryHash = crypto.createHash('md5').update(query).digest('hex');
+
     const cacheKey = `wayvora:overpass:${queryHash}`;
 
     // Fetch data from Overpass

@@ -12,19 +12,11 @@ export interface GeocodingResult {
 }
 
 /* ------------------------------------------------------------------ */
-/* Rate limiting + cache                                               */
+/* Geocoding search                                                    */
 /* ------------------------------------------------------------------ */
 
 let last429Time = 0;
 const COOLDOWN_AFTER_429 = 2000; // 2 seconds
-const CACHE_TTL = 5 * 60_000; // 5 minutes
-
-const searchCache = new Map<string, { timestamp: number; results: GeocodingResult[] }>();
-const reverseCache = new Map<string, { timestamp: number; result: string }>();
-
-/* ------------------------------------------------------------------ */
-/* Geocoding search                                                    */
-/* ------------------------------------------------------------------ */
 
 export async function geocodeSearch(
   query: string,
@@ -32,10 +24,6 @@ export async function geocodeSearch(
 ): Promise<GeocodingResult[]> {
   const now = Date.now();
   if (!query.trim() || now - last429Time < COOLDOWN_AFTER_429) return [];
-
-  const key = query.trim().toLowerCase();
-  const cached = searchCache.get(key);
-  if (cached && now - cached.timestamp < CACHE_TTL) return cached.results;
 
   try {
     const params = new URLSearchParams({
@@ -59,16 +47,13 @@ export async function geocodeSearch(
 
     const data = await response.json();
 
-    const results: GeocodingResult[] = data.map((item: any) => ({
+    return data.map((item: any) => ({
       id: item.place_id,
       displayName: item.display_name,
       coordinates: { lat: parseFloat(item.lat), lng: parseFloat(item.lon) },
       type: item.type || "",
       category: item.category || "",
     }));
-
-    searchCache.set(key, { timestamp: now, results });
-    return results;
   } catch {
     return [];
   }
@@ -80,10 +65,6 @@ export async function geocodeSearch(
 
 export async function reverseGeocode(coords: LatLng): Promise<string> {
   const now = Date.now();
-  const key = `${coords.lat.toFixed(5)},${coords.lng.toFixed(5)}`; // rounded to prevent spam
-  const cached = reverseCache.get(key);
-  if (cached && now - cached.timestamp < CACHE_TTL) return cached.result;
-
   if (now - last429Time < COOLDOWN_AFTER_429) {
     return `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
   }
@@ -110,10 +91,7 @@ export async function reverseGeocode(coords: LatLng): Promise<string> {
     }
 
     const data = await response.json();
-    const displayName = data.display_name || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
-
-    reverseCache.set(key, { timestamp: now, result: displayName });
-    return displayName;
+    return data.display_name || `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
   } catch {
     return `${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`;
   }
