@@ -25,9 +25,11 @@ cp .env backend/.env
 npm run dev
 # → Frontend: http://localhost:3000
 # → Backend:  http://localhost:3001
+```
+## Optional
+### Load Redis with data
 
-#Optional : Cache 
-
+```bash
 # Warm everything (geocoding + POI data)
 cd backend
 npm run warm-cache
@@ -35,6 +37,20 @@ npm run warm-cache
 # Or just geocoding
 npm run warm-geocoding
 ```
+### Redis Insights
+1. Open browser: http://localhost:5540
+2. Add a Standalone Redis database:
+   
+   | Field| Value|
+   |---|---|
+   |Host | wayvora-redis |
+   |Port | 6379 |
+   |Password | (leave blank)|
+   |Database | 0|
+
+3. Test connection → should succeed ✅
+4. Browse keys and view data immediately.
+
 
 ## Architecture
 

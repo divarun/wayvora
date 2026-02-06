@@ -384,6 +384,11 @@ export async function clearCache(): Promise<void> {
   console.log(`[CACHE] Cleared all cache (${deletedCount} keys)`);
 }
 
+async function shutdown() {
+  await redis.quit(); // or .disconnect() depending on your Redis client version
+  console.log('🔌 Redis connection closed.');
+}
+
 /**
  * CLI entrypoint
  */
@@ -412,8 +417,11 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((error) => {
-    console.error('Fatal error:', error);
-    process.exit(1);
-  });
+  main()
+    .then(() => shutdown())
+    .catch(async (error) => {
+      console.error('Fatal error:', error);
+      await shutdown();
+      process.exit(1);
+    });
 }

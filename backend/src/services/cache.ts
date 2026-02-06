@@ -71,17 +71,18 @@ export function getGridCacheKey(
   radius: number,
   categories: string[]
 ): string {
-  // Round to 0.01 degree precision (~1.1km at equator)
-  // This creates a grid where nearby searches share cache
-  const gridLat = Math.round(lat * 100) / 100;
-  const gridLng = Math.round(lng * 100) / 100;
+  // 1 degree latitude ~ 111 km
+  const metersPerDegree = 111_000;
+  const gridSize = radius / metersPerDegree; // grid cell size in degrees
 
-  // Sort categories to ensure consistent ordering
+  const gridLat = Math.floor(lat / gridSize) * gridSize;
+  const gridLng = Math.floor(lng / gridSize) * gridSize;
+
   const sortedCategories = [...categories].sort().join('-');
 
-  // Create semantic cache key
-  return `wayvora:overpass:grid:${gridLat}:${gridLng}:${radius}:${sortedCategories}`;
+  return `wayvora:overpass:grid:${gridLat.toFixed(5)}:${gridLng.toFixed(5)}:${radius}:${sortedCategories}`;
 }
+
 
 /**
  * Get cached data

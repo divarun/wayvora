@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   postgres:
-    image: postgres:16.2-alpine  # pinned version for reproducibility
+    image: postgres:16.2-alpine
     container_name: wayvora-postgres
     environment:
       POSTGRES_USER: wayvora
@@ -20,9 +20,11 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    networks:
+      - wayvora-network
 
   redis:
-    image: redis:7.0.11-alpine  # pinned version
+    image: redis:7.0.11-alpine
     container_name: wayvora-redis
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --save 60 1
     ports:
@@ -35,6 +37,8 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    networks:
+      - wayvora-network
 
   ollama:
     image: ollama/ollama:latest
@@ -44,17 +48,23 @@ services:
     volumes:
       - wayvora-ollama-models:/root/.ollama
     restart: unless-stopped
-    # GPU support (uncomment if you have NVIDIA GPU + nvidia-container-toolkit):
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+    networks:
+      - wayvora-network
+
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    restart: unless-stopped
+    networks:
+      - wayvora-network
 
 volumes:
   wayvora-pgdata:
   wayvora-redis-data:
   wayvora-ollama-models:
 
+networks:
+  wayvora-network:
+    driver: bridge

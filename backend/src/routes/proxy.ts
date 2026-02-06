@@ -14,8 +14,6 @@ const API_TIMEOUT = 60000;
  * Generate cache key with prefix
  */
 function getCacheKey(prefix: string, ...parts: string[]): string {
-    console.log('Cache Key:');
-    console.log(`wayvora:${prefix}:${parts.join(':')}`);
   return `wayvora:${prefix}:${parts.join(':')}`;
 }
 
@@ -111,33 +109,26 @@ router.post("/overpass", async (req: Request, res: Response) => {
  */
 function extractGridCacheKey(query: string): string | null {
   try {
-    // Extract first coordinate pair and radius from query
-    // Example: node["amenity"="restaurant"](around:1500,48.8566,2.3514);
-    const aroundMatch = query.match(/around:(\d+),([\d.]+),([\d.]+)/);
+    // Match radius, lat, lng with optional spaces
+    const aroundMatch = query.match(/around:\s*(\d+)\s*,\s*(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+    if (!aroundMatch) return null;
 
-    if (!aroundMatch) {
-      return null;
-    }
+    const radius = Number(aroundMatch[1]);
+    const lat = Number(aroundMatch[2]);
+    const lng = Number(aroundMatch[3]);
 
-    const radius = parseInt(aroundMatch[1]);
-    const lat = parseFloat(aroundMatch[2]);
-    const lng = parseFloat(aroundMatch[3]);
-
-    // Extract categories from query
     const categories: string[] = [];
+    if (/node\[\s*"amenity"\s*=\s*"restaurant"\s*\]/.test(query)) categories.push('restaurant');
+    if (/node\[\s*"amenity"\s*=\s*"cafe"\s*\]/.test(query)) categories.push('cafe');
+    if (/node\[\s*"tourism"\s*=\s*"museum"\s*\]/.test(query) || /way\[\s*"tourism"\s*=\s*"museum"\s*\]/.test(query)) categories.push('museum');
+    if (/node\[\s*"leisure"\s*=\s*"park"\s*\]/.test(query) || /way\[\s*"leisure"\s*=\s*"park"\s*\]/.test(query)) categories.push('park');
+    if (/node\[\s*"tourism"\s*=\s*"attraction"\s*\]/.test(query) || /node\[\s*"tourism"\s*=\s*"viewpoint"\s*\]/.test(query)) categories.push('attraction');
 
-    if (query.includes('amenity"="restaurant"')) categories.push('restaurant');
-    if (query.includes('amenity"="cafe"')) categories.push('cafe');
-    if (query.includes('tourism"="museum"')) categories.push('museum');
-    if (query.includes('leisure"="park"')) categories.push('park');
-    if (query.includes('tourism"="attraction"') || query.includes('tourism"="viewpoint"')) {
-      categories.push('attraction');
-    }
+    categories.sort();
 
-    // Use grid-based key
     return getGridCacheKey(lat, lng, radius, categories);
-  } catch (error) {
-    console.error('[CACHE] Error extracting grid key:', error);
+  } catch (err) {
+    console.error('[CACHE] Error extracting grid key:', err);
     return null;
   }
 }
