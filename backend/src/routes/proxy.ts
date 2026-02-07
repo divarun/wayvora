@@ -60,9 +60,19 @@ router.post("/overpass", async (req: Request, res: Response) => {
 
       clearTimeout(timeoutId);
 
+      // If rate limited or error, try to return stale cache if available
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[PROXY] Overpass API error ${response.status}:`, errorText);
+
+        // Try to get ANY cached data for this location (even if expired)
+        // This is a fallback to avoid 429/504 errors when APIs are overloaded
+        const staleCacheData = await getCache(finalCacheKey);
+        if (staleCacheData) {
+          console.log('[STALE CACHE] Returning stale cache due to API error');
+          return res.json(staleCacheData);
+        }
+
         return res.status(response.status).json({
           error: `Overpass API error: ${response.status}`,
           details: errorText.substring(0, 200)
@@ -84,6 +94,13 @@ router.post("/overpass", async (req: Request, res: Response) => {
       return res.json(data);
     } catch (fetchError) {
       clearTimeout(timeoutId);
+
+      // On any fetch error, try to return cached data
+      const staleCacheData = await getCache(finalCacheKey);
+      if (staleCacheData) {
+        console.log('[STALE CACHE] Returning stale cache due to fetch error');
+        return res.json(staleCacheData);
+      }
 
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         console.error('[PROXY] Overpass request timeout');
@@ -165,9 +182,18 @@ router.get("/nominatim/search", async (req: Request, res: Response) => {
 
       clearTimeout(timeoutId);
 
+      // If error, try to return stale cache
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[PROXY] Nominatim search error ${response.status}:`, errorText);
+
+        // Try stale cache
+        const staleCacheData = await getCache(cacheKey);
+        if (staleCacheData) {
+          console.log('[STALE CACHE] Returning stale cache due to API error');
+          return res.json(staleCacheData);
+        }
+
         return res.status(response.status).json({
           error: `Nominatim API error: ${response.status}`
         });
@@ -188,6 +214,13 @@ router.get("/nominatim/search", async (req: Request, res: Response) => {
       return res.json(data);
     } catch (fetchError) {
       clearTimeout(timeoutId);
+
+      // Try stale cache on fetch error
+      const staleCacheData = await getCache(cacheKey);
+      if (staleCacheData) {
+        console.log('[STALE CACHE] Returning stale cache due to fetch error');
+        return res.json(staleCacheData);
+      }
 
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         return res.status(504).json({ error: 'Nominatim search timeout' });
@@ -233,9 +266,18 @@ router.get("/nominatim/reverse", async (req: Request, res: Response) => {
 
       clearTimeout(timeoutId);
 
+      // If error, try stale cache
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[PROXY] Nominatim reverse error ${response.status}:`, errorText);
+
+        // Try stale cache
+        const staleCacheData = await getCache(cacheKey);
+        if (staleCacheData) {
+          console.log('[STALE CACHE] Returning stale cache due to API error');
+          return res.json(staleCacheData);
+        }
+
         return res.status(response.status).json({
           error: `Nominatim API error: ${response.status}`
         });
@@ -256,6 +298,13 @@ router.get("/nominatim/reverse", async (req: Request, res: Response) => {
       return res.json(data);
     } catch (fetchError) {
       clearTimeout(timeoutId);
+
+      // Try stale cache on fetch error
+      const staleCacheData = await getCache(cacheKey);
+      if (staleCacheData) {
+        console.log('[STALE CACHE] Returning stale cache due to fetch error');
+        return res.json(staleCacheData);
+      }
 
       if (fetchError instanceof Error && fetchError.name === 'AbortError') {
         return res.status(504).json({ error: 'Nominatim reverse timeout' });

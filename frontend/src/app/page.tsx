@@ -38,27 +38,34 @@ export default function Home() {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setMapCenter({
+          const userLocation = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          });
+          };
+          setMapCenter(userLocation);
+          // Immediately load POIs for user's location
+          load(userLocation);
         },
         (error) => {
           console.log('Geolocation error:', error.message, '- Using default location (New York)');
-          // Keep default New York location if geolocation fails
+          // Load POIs for default location
+          load(mapCenter);
         },
         {
           timeout: 5000,
           maximumAge: 300000, // 5 minutes
         }
       );
+    } else {
+      // No geolocation, load default
+      load(mapCenter);
     }
-  }, []);
+  }, []); // Only run once on mount
 
   const handlePoiClick = useCallback((poi: POI) => {
     setSelectedPoi(poi);
 
-    // NEW: Track visit and check for rewards
+    // Track visit and check for rewards
     const result = gamificationService.visitPOI(poi);
 
     if (result.isNew) {
@@ -81,39 +88,43 @@ export default function Home() {
     }
   }, []);
 
-  // Load POIs when center changes
+  // Initialize daily quests on mount
   useEffect(() => {
-    load(mapCenter);
-  }, [mapCenter, load]);
+    const progress = gamificationService.getProgress();
+    if (progress && progress.activeQuests.length === 0) {
+      const cityName = "Paris"; // or get from current location
+      const dailyQuests = generateDailyQuests(cityName);
+      // Note: You'll need to add a method to add quests to the service
+      // For now, quests are automatically created
+    }
+  }, []);
 
-  // Clear route when planner pois change
-  useEffect(() => {
-    setRouteSegments([]);
-    setTotalDistance(0);
-    setTotalDuration(0);
-    setRouteError(null);
-  }, [plannerPois]);
-
-// In useEffect on mount:
-useEffect(() => {
-  const progress = gamificationService.getProgress();
-  if (progress && progress.activeQuests.length === 0) {
-    const cityName = "Paris"; // or get from current location
-    const dailyQuests = generateDailyQuests(cityName);
-
-    // Note: You'll need to add a method to add quests to the service
-    // For now, quests are automatically created
-  }
-}, []);
-
+  /**
+   * Handle map movements (user panning the map)
+   * This is called when the user manually drags/pans the map
+   */
   const handleMapMoved = useCallback((center: LatLng) => {
+    console.log('🗺️ [page.tsx] Map manually moved to:', center);
     setMapCenter(center);
-  }, []);
+    // Load POIs for the new center
+    load(center);
+  }, [load]);
 
+  /**
+   * Handle search result (city search from sidebar)
+   * This is called when user selects a city from the search dropdown
+   */
   const handleSearchResult = useCallback((lat: number, lng: number) => {
-    console.log('Search result:', lat, lng);
-    setMapCenter({ lat, lng });
-  }, []);
+    console.log('🔍 [page.tsx] City search result:', lat, lng);
+    const newCenter = { lat, lng };
+
+    // Update map center (this will trigger map to move)
+    setMapCenter(newCenter);
+
+    // CRITICAL: Immediately load POIs for the new location
+    // This ensures the POI list updates even if map events are delayed
+    load(newCenter);
+  }, [load]);
 
   const addToPlanner = useCallback((poi: POI) => {
     setPlannerPois((prev) => {
@@ -157,6 +168,14 @@ useEffect(() => {
     }
   }, [plannerPois, transportMode]);
 
+  // Clear route when planner pois change
+  useEffect(() => {
+    setRouteSegments([]);
+    setTotalDistance(0);
+    setTotalDuration(0);
+    setRouteError(null);
+  }, [plannerPois]);
+
   return (
     <div className="min-h-screen h-screen overflow-hidden bg-slate-950 flex flex-col">
       {/* Background mesh */}
@@ -174,7 +193,7 @@ useEffect(() => {
       {/* Auth Modal */}
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
-      {/* NEW: Passport Panel */}
+      {/* Passport Panel */}
       {showPassport && <PassportPanel />}
 
       {/* POI Detail Modal */}
@@ -202,7 +221,7 @@ useEffect(() => {
                 pois={pois}
                 loading={loading}
                 error={error}
-               onPoiClick={handlePoiClick}
+                onPoiClick={handlePoiClick}
                 onSearchResult={handleSearchResult}
                 onAddToPlanner={addToPlanner}
               />
@@ -269,7 +288,7 @@ useEffect(() => {
             onPoiClick={handlePoiClick}
             onMapMoved={handleMapMoved}
             loading={loading}
-            center={mapCenter} // Pass center to map!
+            center={mapCenter}
           />
         </div>
 

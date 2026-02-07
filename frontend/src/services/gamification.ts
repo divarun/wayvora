@@ -159,8 +159,8 @@ class GamificationService {
   }
 
   getProgress(): UserProgress | null {
-      return this.progress;
-    }
+    return this.progress;
+  }
 
   /* ---------- COUNTRY DETECTION ---------- */
 
@@ -193,9 +193,8 @@ class GamificationService {
   ): { neighborhood: string; city: string; countryCode: string } {
     const parts = locationString.split(",").map(p => p.trim());
 
-    let neighborhood = parts[0] || "";
-    let city = parts[1] || parts[0] || "";
-    let countryCode = COUNTRIES.defaultCountryCode;
+    const neighborhood = parts[0] || "";
+    const city = parts[1] || parts[0] || "";
 
     const countryPart = parts[parts.length - 1]?.toLowerCase();
     let countryFromGeocode: string | undefined;
@@ -210,7 +209,7 @@ class GamificationService {
       }
     }
 
-    countryCode = this.detectCountryCode(poi.address, countryFromGeocode);
+    const countryCode = this.detectCountryCode(poi.address, countryFromGeocode);
     return { neighborhood, city, countryCode };
   }
 
@@ -220,10 +219,8 @@ class GamificationService {
     if (!this.progress) return null;
 
     const locationString = await reverseGeocode(poi.coordinates);
-    const { neighborhood, city, countryCode } = this.parseLocation(
-      locationString,
-      poi
-    );
+    const { neighborhood, city, countryCode } =
+      this.parseLocation(locationString, poi);
 
     if (!neighborhood || !city) return null;
 
@@ -239,6 +236,153 @@ class GamificationService {
       uniquePOIsVisited: 1,
       rarity,
       aiDescription: `${neighborhood} is a distinctive part of ${city}.`,
+    };
+  }
+
+  /* ---------- VISIT POI ---------- */
+
+  public async visitPOI(poi: POI): Promise<{
+    isNew: boolean;
+    xpGained: number;
+    leveledUp: boolean;
+    newLevel?: string;
+    achievements: Achievement[];
+    mysteryBox?: MysteryBox;
+  }> {
+    const isNew = !this.visitedPOIs.has(poi.id);
+
+    if (!isNew) {
+      return {
+        isNew: false,
+        xpGained: 0,
+        leveledUp: false,
+        achievements: [],
+      };
+    }
+
+    this.visitedPOIs.add(poi.id);
+    localStorage.setItem(
+      STORAGE_KEY_VISITED_POIS,
+      JSON.stringify([...this.visitedPOIs])
+    );
+
+    if (!this.progress) {
+      this.progress = this.createNewProgress();
+    }
+
+    const stamp = await this.createStamp(poi);
+    if (stamp) {
+      this.progress.passport.stamps.push(stamp);
+    }
+
+    const stats = this.progress.passport.statistics;
+    stats.poisVisited++;
+    stats.lastActiveDate = new Date();
+
+    const xpGained = 10;
+    const level = this.progress.passport.level;
+    const newXP = level.xp + xpGained;
+
+    let leveledUp = false;
+    let newLevel: string | undefined;
+
+    if (newXP >= level.xpToNextLevel) {
+      level.level++;
+      level.xp = newXP - level.xpToNextLevel;
+      level.xpToNextLevel = this.calculateNextLevelXP(level.level);
+      level.title = this.getExplorerTitle(level.level);
+      leveledUp = true;
+      newLevel = level.title;
+    } else {
+      level.xp = newXP;
+    }
+
+    const achievements = this.checkAchievements();
+
+    const mysteryBox =
+      stats.poisVisited % 10 === 0 ? this.generateMysteryBox() : undefined;
+
+    this.saveProgress();
+
+    return {
+      isNew,
+      xpGained,
+      leveledUp,
+      newLevel,
+      achievements,
+      mysteryBox,
+    };
+  }
+
+  /* ---------- LEVELING ---------- */
+
+  private calculateNextLevelXP(level: number): number {
+    return Math.floor(100 * Math.pow(1.5, level - 1));
+  }
+
+  private getExplorerTitle(level: number): string {
+    const titles: ExplorerTitle[] = [
+      "Tourist",
+      "Wanderer",
+      "Explorer",
+      "Adventurer",
+      "Pathfinder",
+      "Voyager",
+      "Nomad",
+      "Globetrotter",
+      "Legend",
+    ];
+    const index = Math.min(Math.floor(level / 5), titles.length - 1);
+    return titles[index];
+  }
+
+  /* ---------- ACHIEVEMENTS ---------- */
+
+  private checkAchievements(): Achievement[] {
+    if (!this.progress) return [];
+
+    const newAchievements: Achievement[] = [];
+    const stats = this.progress.passport.statistics;
+
+    for (const achievement of ACHIEVEMENT_LIBRARY) {
+      if (this.progress.achievements.some(a => a.id === achievement.id)) {
+        continue;
+      }
+
+      let met = false;
+      switch (achievement.requirement.type) {
+        case "pois_visited":
+          met = stats.poisVisited >= achievement.requirement.target;
+          break;
+        case "distance_walked":
+          met = stats.totalDistance >= achievement.requirement.target;
+          break;
+        case "distance_cycled":
+          break;
+      }
+
+      if (met) {
+        this.progress.achievements.push(achievement);
+        newAchievements.push(achievement);
+        if (achievement.reward.xp) {
+          this.progress.passport.level.xp += achievement.reward.xp;
+        }
+      }
+    }
+
+    return newAchievements;
+  }
+
+  /* ---------- MYSTERY BOX ---------- */
+
+  private generateMysteryBox(): MysteryBox {
+    return {
+      id: `box_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+      name: "Explorer's Treasure",
+      rarity: "rare",
+      description: "A mysterious reward for your dedication!",
+      earnedAt: new Date(),
+      isOpened: false,
     };
   }
 
@@ -300,6 +444,16 @@ class GamificationService {
   private loadTripHistory(): void {
     const stored = localStorage.getItem(STORAGE_KEY_TRIP_HISTORY);
     if (stored) this.tripHistory = JSON.parse(stored);
+  }
+
+  private saveProgress(): void {
+    if (this.progress) {
+      this.progress.passport.updatedAt = new Date();
+      localStorage.setItem(
+        STORAGE_KEY_PROGRESS,
+        JSON.stringify(this.progress)
+      );
+    }
   }
 }
 
