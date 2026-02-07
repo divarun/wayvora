@@ -51,47 +51,7 @@ npm run warm-geocoding
 3. Test connection → should succeed ✅
 4. Browse keys and view data immediately.
 
-
-## Architecture
-
-```
-wayvora/
-├── frontend/          
-│   └── src/
-│       ├── app/       
-│       ├── components/
-│       ├── data/
-│       ├── hooks/     
-│       ├── services/ 
-│       ├── styles/ 
-│       ├── types/     
-│       └── utils/     
-├── backend/           
-│   └── src/
-│       ├── data/ 
-│       ├── db/ 
-│       ├── middleware/   
-│       ├── routes/
-│       ├── services/  
-│       ├── scripts/ 
-│       └── services/        
-├── database/          
-├── docker-compose.yml 
-└── .env.example       
-```
-
-## Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `postgresql://wayvora:wayvora@localhost:5432/wayvora` | PostgreSQL connection |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
-| `OLLAMA_MODEL` | `llama3` | Model to use |
-| `PORT` | `3001` | Backend port |
-| `JWT_SECRET` | dev default | Change in production |
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:3001/api` | Frontend → Backend |
-| `NEXT_PUBLIC_OSRM_URL` | `http://router.project-osrm.org` | Routing engine |
+**See [Full Developer Guide](Developer_Guide.md) for more details**
 
 
 
-All dependencies are open source. No Google Maps, Mapbox, OpenAI, or proprietary services.
